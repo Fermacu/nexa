@@ -1,14 +1,50 @@
 'use client'
 
 import { useState } from 'react'
-import { Container, Grid, Typography, Button, Box, TextField, Tabs, Tab } from "@mui/material"
+import { Container, Grid, Typography, Button, Box, Tabs, Tab, Divider } from "@mui/material"
 import Link from 'next/link'
+import { DynamicForm, FormData } from '@app/components/DynamicForm'
+import { companyRegistrationConfig, transformRegistrationData } from './companyRegistrationConfig'
 
 export default function AuthPage() {
   const [tabValue, setTabValue] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [externalErrors, setExternalErrors] = useState<Record<string, string>>({})
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
+    setExternalErrors({}) // Clear errors when switching tabs
+  }
+
+  const handleCompanyRegistration = async (data: FormData) => {
+    setLoading(true)
+    setExternalErrors({})
+
+    try {
+      // Transform form data to API format
+      const registrationData = transformRegistrationData(data)
+
+      // TODO: Replace with actual API call
+      console.log('Registration data:', registrationData)
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Handle successful registration
+      // Redirect to dashboard or success page
+      // router.push('/dashboard')
+    } catch (error: any) {
+      // Handle API errors
+      if (error.response?.data?.errors) {
+        setExternalErrors(error.response.data.errors)
+      } else {
+        setExternalErrors({
+          _general: error.message || 'Ocurrió un error. Por favor intenta de nuevo.',
+        })
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -69,96 +105,45 @@ export default function AuthPage() {
             </Box>
           </Grid>
 
-          {/* Formulario de Inicio de Sesión */}
+          {/* Sign In Form */}
           {tabValue === 0 && (
             <Grid size={{ xs: 12 }}>
               <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <TextField
-                  label="Correo electrónico"
-                  type="email"
-                  variant="outlined"
-                  fullWidth
-                  required
-                />
-                <TextField
-                  label="Contraseña"
-                  type="password"
-                  variant="outlined"
-                  fullWidth
-                  required
-                />
-                <Button
-                  variant="contained"
-                  size="large"
-                  fullWidth
-                  sx={{
-                    py: 1.5,
-                    fontSize: "1rem",
-                    textTransform: "none",
-                    fontWeight: 600,
-                    mt: 1,
-                  }}
-                >
-                  Iniciar sesión
-                </Button>
+                {/* TODO: Replace with DynamicForm for sign in */}
                 <Typography
-                  variant="body2"
+                  variant="body1"
                   color="text.secondary"
-                  sx={{ textAlign: 'center', mt: 1 }}
+                  sx={{ textAlign: 'center', py: 4 }}
                 >
-                  ¿Olvidaste tu contraseña?
+                  El formulario de inicio de sesión se implementará aquí
                 </Typography>
               </Box>
             </Grid>
           )}
 
-          {/* Formulario de Registro */}
+          {/* Company Registration Form */}
           {tabValue === 1 && (
             <Grid size={{ xs: 12 }}>
-              <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <TextField
-                  label="Nombre completo"
-                  type="text"
-                  variant="outlined"
-                  fullWidth
-                  required
-                />
-                <TextField
-                  label="Correo electrónico"
-                  type="email"
-                  variant="outlined"
-                  fullWidth
-                  required
-                />
-                <TextField
-                  label="Contraseña"
-                  type="password"
-                  variant="outlined"
-                  fullWidth
-                  required
-                />
-                <TextField
-                  label="Confirmar contraseña"
-                  type="password"
-                  variant="outlined"
-                  fullWidth
-                  required
-                />
-                <Button
-                  variant="contained"
-                  size="large"
-                  fullWidth
+              {externalErrors._general && (
+                <Box
                   sx={{
-                    py: 1.5,
-                    fontSize: "1rem",
-                    textTransform: "none",
-                    fontWeight: 600,
-                    mt: 1,
+                    mb: 3,
+                    p: 2,
+                    borderRadius: 1,
+                    bgcolor: 'error.dark',
+                    color: 'error.contrastText',
                   }}
                 >
-                  Crear cuenta
-                </Button>
-              </Box>
+                  <Typography variant="body2">{externalErrors._general}</Typography>
+                </Box>
+              )}
+
+              <DynamicForm
+                config={companyRegistrationConfig}
+                onSubmit={handleCompanyRegistration}
+                loading={loading}
+                errors={externalErrors}
+              />
             </Grid>
           )}
 
@@ -170,6 +155,7 @@ export default function AuthPage() {
                   variant="text"
                   sx={{
                     textTransform: "none",
+                    color: 'text.secondary',
                   }}
                 >
                   Volver al inicio
