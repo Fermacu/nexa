@@ -8,7 +8,7 @@
  * field types including text, select, multiselect, textarea, etc.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Grid,
   TextField,
@@ -23,7 +23,7 @@ import {
   FormControlLabel,
   OutlinedInput,
 } from '@mui/material'
-import { FieldConfig, DynamicFormProps, FormData, FormErrors } from './types'
+import { FieldConfig, DynamicFormProps, FormData, FormErrors, TextFieldConfig } from './types'
 import { validateField, validateForm } from './validation'
 
 export function DynamicForm({
@@ -37,75 +37,83 @@ export function DynamicForm({
 }: DynamicFormProps) {
   const [formData, setFormData] = useState<FormData>(initialValues)
   const [errors, setErrors] = useState<FormErrors>({})
+  const [touched, setTouched] = useState<Record<string, boolean>>({})
 
-  // Update form data when initialValues change
+  // Update errors when externalErrors change (only for touched fields)
   useEffect(() => {
-    setFormData(initialValues)
-  }, [initialValues])
-
-  // Update errors when externalErrors change
-  useEffect(() => {
-    if (Object.keys(externalErrors).length > 0) {
-      setErrors(externalErrors)
-    }
-  }, [externalErrors])
+    const touchedErrors: FormErrors = {}
+    Object.keys(externalErrors).forEach((key) => {
+      if (touched[key] && externalErrors[key]) {
+        touchedErrors[key] = externalErrors[key]
+      }
+    })
+    setErrors((prevErrors) => ({ ...prevErrors, ...touchedErrors }))
+  }, [externalErrors, touched])
 
   // Handle field value change
-  const handleChange = useCallback(
-    (fieldName: string, value: any) => {
-      const newData = { ...formData, [fieldName]: value }
-      setFormData(newData)
+  const handleChange = (fieldName: string, value: any) => {
+    // Mark field as touched
+    setTouched((prevTouched) => ({ ...prevTouched, [fieldName]: true }))
 
-      // Validate field
-      const field = config.fields.find((f) => f.name === fieldName)
-      if (field?.validation) {
-        const error = validateField(value, field.validation)
-        setErrors((prev) => ({
-          ...prev,
-          [fieldName]: error || '',
-        }))
-      } else {
-        // Clear error for this field
-        setErrors((prev) => {
-          const newErrors = { ...prev }
-          delete newErrors[fieldName]
-          return newErrors
-        })
-      }
+    // Calculate new data using current formData
+    const newData = { ...formData, [fieldName]: value }
+    
+    // Update form data
+    setFormData(newData)
 
-      // Call onChange callback
-      if (onChange) {
-        onChange(newData)
-      }
-    },
-    [formData, config.fields, onChange]
-  )
+    // Validate field (only show errors for touched fields)
+    const field = config.fields.find((f) => f.name === fieldName)
+    if (field?.validation) {
+      const error = validateField(value, field.validation)
+      setErrors((prevErrors) => ({
+        ...prevErrors,
+        [fieldName]: error || '',
+      }))
+    } else {
+      // Clear error for this field
+      setErrors((prevErrors) => {
+        const newErrors = { ...prevErrors }
+        delete newErrors[fieldName]
+        return newErrors
+      })
+    }
+
+    // Call onChange callback
+    if (onChange) {
+      onChange(newData)
+    }
+  }
 
   // Handle form submission
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
 
-      // Validate all fields
-      const validationErrors = validateForm(formData, config.fields)
-      setErrors(validationErrors)
+    // Mark all fields as touched
+    const allTouched: Record<string, boolean> = {}
+    config.fields.forEach((field) => {
+      allTouched[field.name] = true
+    })
+    setTouched(allTouched)
 
-      // If there are errors, don't submit
-      if (Object.keys(validationErrors).length > 0) {
-        return
-      }
+    // Validate all fields
+    const validationErrors = validateForm(formData, config.fields)
+    setErrors(validationErrors)
 
-      // Call onSubmit
-      await onSubmit(formData)
+    // If there are errors, don't submit
+    if (Object.keys(validationErrors).length > 0) {
+      return
+    }
 
-      // Reset form if configured
-      if (config.resetOnSubmit) {
-        setFormData(initialValues)
-        setErrors({})
-      }
-    },
-    [formData, config, onSubmit, initialValues]
-  )
+    // Call onSubmit
+    await onSubmit(formData)
+
+    // Reset form if configured
+    if (config.resetOnSubmit) {
+      setFormData(initialValues)
+      setErrors({})
+      setTouched({})
+    }
+  }
 
   // Render a text field
   const renderTextField = (field: FieldConfig) => {
@@ -118,27 +126,34 @@ export function DynamicForm({
           placeholder={field.placeholder}
           value={formData[field.name] || ''}
           onChange={(e) => handleChange(field.name, e.target.value)}
-          error={!!errors[field.name]}
-          helperText={errors[field.name] || field.helperText}
+          error={!!(touched[field.name] && errors[field.name])}
+          helperText={touched[field.name] ? (errors[field.name] || field.helperText) : field.helperText}
           disabled={field.disabled || loading}
           fullWidth={field.fullWidth !== false}
           multiline
-          rows={field.rows || 4}
+          rows={field.type === 'textarea' ? (field.rows || 4) : undefined}
           required={field.validation?.required}
         />
       )
     }
 
+    const textFieldTypes = ['text', 'email', 'password', 'number', 'tel', 'url']
+    if (!textFieldTypes.includes(field.type)) {
+      return null
+    }
+
+    const textField = field as TextFieldConfig
+
     const inputType =
-      field.type === 'email'
+      textField.type === 'email'
         ? 'email'
-        : field.type === 'password'
+        : textField.type === 'password'
         ? 'password'
-        : field.type === 'tel'
+        : textField.type === 'tel'
         ? 'tel'
-        : field.type === 'url'
+        : textField.type === 'url'
         ? 'url'
-        : field.type === 'number'
+        : textField.type === 'number'
         ? 'number'
         : 'text'
 
@@ -153,17 +168,17 @@ export function DynamicForm({
         onChange={(e) =>
           handleChange(
             field.name,
-            field.type === 'number' ? Number(e.target.value) : e.target.value
+            textField.type === 'number' ? Number(e.target.value) : e.target.value
           )
         }
-        error={!!errors[field.name]}
-        helperText={errors[field.name] || field.helperText}
+        error={!!(touched[field.name] && errors[field.name])}
+        helperText={touched[field.name] ? (errors[field.name] || field.helperText) : field.helperText}
         disabled={field.disabled || loading}
         fullWidth={field.fullWidth !== false}
-        multiline={field.multiline}
-        rows={field.rows}
+        multiline={textField.multiline}
+        rows={textField.rows}
         required={field.validation?.required}
-        InputProps={field.inputProps}
+        InputProps={textField.inputProps}
       />
     )
   }
@@ -179,7 +194,7 @@ export function DynamicForm({
       <FormControl
         key={field.name}
         fullWidth={field.fullWidth !== false}
-        error={!!errors[field.name]}
+        error={!!(touched[field.name] && errors[field.name])}
         disabled={field.disabled || loading}
         required={field.validation?.required}
       >
@@ -201,9 +216,9 @@ export function DynamicForm({
             </MenuItem>
           ))}
         </Select>
-        {(errors[field.name] || field.helperText) && (
+        {(touched[field.name] ? (errors[field.name] || field.helperText) : field.helperText) && (
           <FormHelperText>
-            {errors[field.name] || field.helperText}
+            {touched[field.name] ? (errors[field.name] || field.helperText) : field.helperText}
           </FormHelperText>
         )}
       </FormControl>
@@ -222,8 +237,8 @@ export function DynamicForm({
         label={field.label}
         value={formData[field.name] || ''}
         onChange={(e) => handleChange(field.name, e.target.value)}
-        error={!!errors[field.name]}
-        helperText={errors[field.name] || field.helperText}
+        error={!!(touched[field.name] && errors[field.name])}
+        helperText={touched[field.name] ? (errors[field.name] || field.helperText) : field.helperText}
         disabled={field.disabled || loading}
         fullWidth={field.fullWidth !== false}
         required={field.validation?.required}
@@ -294,13 +309,13 @@ export function DynamicForm({
     <Box component="form" onSubmit={handleSubmit} className={className}>
       <Grid container spacing={spacing} direction={direction}>
         {config.fields.map((field) => (
-          <Grid item xs={12} key={field.name}>
+          <Grid size={{ xs: 12 }} key={field.name}>
             {renderField(field)}
           </Grid>
         ))}
 
         {config.showSubmitButton !== false && (
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Button
               type="submit"
               variant="contained"

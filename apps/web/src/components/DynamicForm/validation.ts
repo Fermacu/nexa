@@ -18,11 +18,11 @@ export function validateField(
   // Required validation
   if (rules.required) {
     if (value === null || value === undefined || value === '') {
-      return 'This field is required'
+      return 'Este campo es requerido'
     }
     // For arrays (multiselect), check if empty
     if (Array.isArray(value) && value.length === 0) {
-      return 'This field is required'
+      return 'Este campo es requerido'
     }
   }
 
@@ -35,32 +35,32 @@ export function validateField(
   if (rules.email || rules.pattern) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (rules.email && typeof value === 'string' && !emailRegex.test(value)) {
-      return 'Please enter a valid email address'
+      return 'Por favor ingresa un correo electrónico válido'
     }
   }
 
   // Pattern validation
   if (rules.pattern && typeof value === 'string' && !rules.pattern.test(value)) {
-    return 'Invalid format'
+    return 'Formato inválido'
   }
 
   // String length validations
   if (typeof value === 'string') {
     if (rules.minLength && value.length < rules.minLength) {
-      return `Minimum length is ${rules.minLength} characters`
+      return `La longitud mínima es ${rules.minLength} caracteres`
     }
     if (rules.maxLength && value.length > rules.maxLength) {
-      return `Maximum length is ${rules.maxLength} characters`
+      return `La longitud máxima es ${rules.maxLength} caracteres`
     }
   }
 
   // Number validations
   if (typeof value === 'number') {
     if (rules.min !== undefined && value < rules.min) {
-      return `Minimum value is ${rules.min}`
+      return `El valor mínimo es ${rules.min}`
     }
     if (rules.max !== undefined && value > rules.max) {
-      return `Maximum value is ${rules.max}`
+      return `El valor máximo es ${rules.max}`
     }
   }
 
