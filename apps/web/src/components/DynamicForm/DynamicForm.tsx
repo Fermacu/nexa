@@ -8,7 +8,7 @@
  * field types including text, select, multiselect, textarea, etc.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Grid,
   TextField,
@@ -51,69 +51,76 @@ export function DynamicForm({
   }, [externalErrors, touched])
 
   // Handle field value change
-  const handleChange = (fieldName: string, value: any) => {
-    // Mark field as touched
-    setTouched((prevTouched) => ({ ...prevTouched, [fieldName]: true }))
+  const handleChange = useCallback(
+    (fieldName: string, value: unknown) => {
+      // Mark field as touched
+      setTouched((prevTouched) => ({ ...prevTouched, [fieldName]: true }))
 
-    // Calculate new data using current formData
-    const newData = { ...formData, [fieldName]: value }
-    
-    // Update form data
-    setFormData(newData)
+      // Calculate new data using current formData
+      setFormData((prevFormData) => {
+        const newData = { ...prevFormData, [fieldName]: value }
 
-    // Validate field (only show errors for touched fields)
-    const field = config.fields.find((f) => f.name === fieldName)
-    if (field?.validation) {
-      const error = validateField(value, field.validation)
-      setErrors((prevErrors) => ({
-        ...prevErrors,
-        [fieldName]: error || '',
-      }))
-    } else {
-      // Clear error for this field
-      setErrors((prevErrors) => {
-        const newErrors = { ...prevErrors }
-        delete newErrors[fieldName]
-        return newErrors
+        // Validate field (only show errors for touched fields)
+        const field = config.fields.find((f) => f.name === fieldName)
+        if (field?.validation) {
+          const error = validateField(value, field.validation)
+          setErrors((prevErrors) => ({
+            ...prevErrors,
+            [fieldName]: error || '',
+          }))
+        } else {
+          // Clear error for this field
+          setErrors((prevErrors) => {
+            const newErrors = { ...prevErrors }
+            delete newErrors[fieldName]
+            return newErrors
+          })
+        }
+
+        // Call onChange callback
+        if (onChange) {
+          onChange(newData)
+        }
+
+        return newData
       })
-    }
-
-    // Call onChange callback
-    if (onChange) {
-      onChange(newData)
-    }
-  }
+    },
+    [config.fields, onChange]
+  )
 
   // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
 
-    // Mark all fields as touched
-    const allTouched: Record<string, boolean> = {}
-    config.fields.forEach((field) => {
-      allTouched[field.name] = true
-    })
-    setTouched(allTouched)
+      // Mark all fields as touched
+      const allTouched: Record<string, boolean> = {}
+      config.fields.forEach((field) => {
+        allTouched[field.name] = true
+      })
+      setTouched(allTouched)
 
-    // Validate all fields
-    const validationErrors = validateForm(formData, config.fields)
-    setErrors(validationErrors)
+      // Validate all fields
+      const validationErrors = validateForm(formData, config.fields)
+      setErrors(validationErrors)
 
-    // If there are errors, don't submit
-    if (Object.keys(validationErrors).length > 0) {
-      return
-    }
+      // If there are errors, don't submit
+      if (Object.keys(validationErrors).length > 0) {
+        return
+      }
 
-    // Call onSubmit
-    await onSubmit(formData)
+      // Call onSubmit
+      await onSubmit(formData)
 
-    // Reset form if configured
-    if (config.resetOnSubmit) {
-      setFormData(initialValues)
-      setErrors({})
-      setTouched({})
-    }
-  }
+      // Reset form if configured
+      if (config.resetOnSubmit) {
+        setFormData(initialValues)
+        setErrors({})
+        setTouched({})
+      }
+    },
+    [formData, config.fields, config.resetOnSubmit, initialValues, onSubmit]
+  )
 
   // Render a text field
   const renderTextField = (field: FieldConfig) => {
