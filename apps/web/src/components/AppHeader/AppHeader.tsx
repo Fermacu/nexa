@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
+import { useMemo, useCallback } from 'react'
 import {
   AppBar,
   Toolbar,
@@ -17,7 +18,15 @@ export function AppHeader() {
   const router = useRouter()
   const pathname = usePathname()
 
-  const isProfile = pathname === '/profile'
+  const isProfile = useMemo(() => pathname === '/profile', [pathname])
+
+  const handleHomeClick = useCallback(() => {
+    router.push('/dashboard')
+  }, [router])
+
+  const handleProfileClick = useCallback(() => {
+    router.push('/profile')
+  }, [router])
 
   return (
     <AppBar
@@ -47,7 +56,7 @@ export function AppHeader() {
           <IconButton
             size="small"
             aria-label="home"
-            onClick={() => router.push('/dashboard')}
+            onClick={handleHomeClick}
             sx={{
               color: 'text.primary',
               '&:hover': {
@@ -68,7 +77,7 @@ export function AppHeader() {
             sx={{
               color: isProfile ? 'primary.main' : 'text.primary',
             }}
-            onClick={() => router.push('/profile')}
+            onClick={handleProfileClick}
           >
             <AccountCircleIcon />
           </IconButton>
