@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Container, Grid, Typography, Button, Box, Tabs, Tab, Divider } from "@mui/material"
 import Link from 'next/link'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
@@ -9,10 +10,11 @@ import { loginConfig } from './loginConfig'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
 
 export default function AuthPage() {
+  const router = useRouter()
   const [tabValue, setTabValue] = useState(0)
   const [loading, setLoading] = useState(false)
   const [externalErrors, setExternalErrors] = useState<Record<string, string>>({})
-  const { showError } = useGlobalAlert()
+  const { showError, showSuccess } = useGlobalAlert()
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
@@ -31,8 +33,10 @@ export default function AuthPage() {
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // Handle successful login
+      showSuccess('Inicio de sesión exitoso')
+      
       // Redirect to dashboard
-      // router.push('/dashboard')
+      router.push('/dashboard')
     } catch (error: any) {
       // Handle API errors
       if (error.response?.data?.errors) {
