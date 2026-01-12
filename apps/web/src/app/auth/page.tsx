@@ -1,19 +1,61 @@
 'use client'
 
 import { useState } from 'react'
-import { Container, Grid, Typography, Button, Box, Tabs, Tab, Divider } from "@mui/material"
+import { useRouter } from 'next/navigation'
+import { Container, Grid, Typography, Button, Box, Tabs, Tab } from "@mui/material"
 import Link from 'next/link'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import { companyRegistrationConfig, transformRegistrationData } from './companyRegistrationConfig'
+import { loginConfig } from './loginConfig'
+import { useGlobalAlert } from '@app/components/GlobalAlert'
 
 export default function AuthPage() {
+  const router = useRouter()
   const [tabValue, setTabValue] = useState(0)
   const [loading, setLoading] = useState(false)
   const [externalErrors, setExternalErrors] = useState<Record<string, string>>({})
+  const { showError, showSuccess } = useGlobalAlert()
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
     setExternalErrors({}) // Clear errors when switching tabs
+  }
+
+  const handleLogin = async (data: FormData) => {
+    setLoading(true)
+    setExternalErrors({})
+
+    try {
+      // TODO: Replace with actual API call
+      console.log('Login data:', data)
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Handle successful login
+      showSuccess('Inicio de sesión exitoso')
+      
+      // Redirect to dashboard
+      router.push('/dashboard')
+    } catch (error) {
+      // Handle API errors
+      const apiError = error as {
+        response?: {
+          data?: {
+            errors?: Record<string, string>
+          }
+        }
+        message?: string
+      }
+
+      if (apiError.response?.data?.errors) {
+        setExternalErrors(apiError.response.data.errors)
+      } else {
+        showError(apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleCompanyRegistration = async (data: FormData) => {
@@ -33,14 +75,21 @@ export default function AuthPage() {
       // Handle successful registration
       // Redirect to dashboard or success page
       // router.push('/dashboard')
-    } catch (error: any) {
+    } catch (error) {
       // Handle API errors
-      if (error.response?.data?.errors) {
-        setExternalErrors(error.response.data.errors)
+      const apiError = error as {
+        response?: {
+          data?: {
+            errors?: Record<string, string>
+          }
+        }
+        message?: string
+      }
+
+      if (apiError.response?.data?.errors) {
+        setExternalErrors(apiError.response.data.errors)
       } else {
-        setExternalErrors({
-          _general: error.message || 'Ocurrió un error. Por favor intenta de nuevo.',
-        })
+        showError(apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.')
       }
     } finally {
       setLoading(false)
@@ -108,36 +157,18 @@ export default function AuthPage() {
           {/* Sign In Form */}
           {tabValue === 0 && (
             <Grid size={{ xs: 12 }}>
-              <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {/* TODO: Replace with DynamicForm for sign in */}
-                <Typography
-                  variant="body1"
-                  color="text.secondary"
-                  sx={{ textAlign: 'center', py: 4 }}
-                >
-                  El formulario de inicio de sesión se implementará aquí
-                </Typography>
-              </Box>
+              <DynamicForm
+                config={loginConfig}
+                onSubmit={handleLogin}
+                loading={loading}
+                errors={externalErrors}
+              />
             </Grid>
           )}
 
           {/* Company Registration Form */}
           {tabValue === 1 && (
             <Grid size={{ xs: 12 }}>
-              {externalErrors._general && (
-                <Box
-                  sx={{
-                    mb: 3,
-                    p: 2,
-                    borderRadius: 1,
-                    bgcolor: 'error.dark',
-                    color: 'error.contrastText',
-                  }}
-                >
-                  <Typography variant="body2">{externalErrors._general}</Typography>
-                </Box>
-              )}
-
               <DynamicForm
                 config={companyRegistrationConfig}
                 onSubmit={handleCompanyRegistration}

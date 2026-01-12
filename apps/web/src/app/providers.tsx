@@ -2,12 +2,16 @@
 
 import { ThemeProvider, CssBaseline } from '@mui/material'
 import { theme } from '@app/theme'
+import { GlobalAlertProvider, GlobalAlert } from '@app/components/GlobalAlert'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {children}
+      <GlobalAlertProvider>
+        {children}
+        <GlobalAlert />
+      </GlobalAlertProvider>
     </ThemeProvider>
   )
 }
