@@ -6,11 +6,13 @@ import Link from 'next/link'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import { companyRegistrationConfig, transformRegistrationData } from './companyRegistrationConfig'
 import { loginConfig } from './loginConfig'
+import { useGlobalAlert } from '@app/components/GlobalAlert'
 
 export default function AuthPage() {
   const [tabValue, setTabValue] = useState(0)
   const [loading, setLoading] = useState(false)
   const [externalErrors, setExternalErrors] = useState<Record<string, string>>({})
+  const { showError } = useGlobalAlert()
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
@@ -36,9 +38,7 @@ export default function AuthPage() {
       if (error.response?.data?.errors) {
         setExternalErrors(error.response.data.errors)
       } else {
-        setExternalErrors({
-          _general: error.message || 'Ocurrió un error. Por favor intenta de nuevo.',
-        })
+        showError(error.message || 'Ocurrió un error. Por favor intenta de nuevo.')
       }
     } finally {
       setLoading(false)
@@ -67,9 +67,7 @@ export default function AuthPage() {
       if (error.response?.data?.errors) {
         setExternalErrors(error.response.data.errors)
       } else {
-        setExternalErrors({
-          _general: error.message || 'Ocurrió un error. Por favor intenta de nuevo.',
-        })
+        showError(error.message || 'Ocurrió un error. Por favor intenta de nuevo.')
       }
     } finally {
       setLoading(false)
@@ -137,20 +135,6 @@ export default function AuthPage() {
           {/* Sign In Form */}
           {tabValue === 0 && (
             <Grid size={{ xs: 12 }}>
-              {externalErrors._general && (
-                <Box
-                  sx={{
-                    mb: 3,
-                    p: 2,
-                    borderRadius: 1,
-                    bgcolor: 'error.dark',
-                    color: 'error.contrastText',
-                  }}
-                >
-                  <Typography variant="body2">{externalErrors._general}</Typography>
-                </Box>
-              )}
-
               <DynamicForm
                 config={loginConfig}
                 onSubmit={handleLogin}
@@ -163,20 +147,6 @@ export default function AuthPage() {
           {/* Company Registration Form */}
           {tabValue === 1 && (
             <Grid size={{ xs: 12 }}>
-              {externalErrors._general && (
-                <Box
-                  sx={{
-                    mb: 3,
-                    p: 2,
-                    borderRadius: 1,
-                    bgcolor: 'error.dark',
-                    color: 'error.contrastText',
-                  }}
-                >
-                  <Typography variant="body2">{externalErrors._general}</Typography>
-                </Box>
-              )}
-
               <DynamicForm
                 config={companyRegistrationConfig}
                 onSubmit={handleCompanyRegistration}
