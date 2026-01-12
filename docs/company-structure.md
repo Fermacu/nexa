@@ -81,7 +81,7 @@ address: {
 1. **User email**: Must be unique, valid email format
 2. **Company email**: Valid email format, can be different from user email
 3. **Phone**: Valid format (allows different international formats)
-4. **Company name**: Minimum 2 characters, maximum 200 characters
+4. **Company name**: Must be unique in the system, minimum 2 characters, maximum 200 characters
 5. **Address**: All required fields must be complete
 
 ### Future Validations (Consider)
@@ -89,7 +89,6 @@ address: {
 - Email verification via confirmation code
 - Phone verification via SMS
 - Business existence validation (public records, if applicable)
-- Corporate email domain validation
 
 ---
 
@@ -117,7 +116,7 @@ interface CompanyAddress {
 
 interface Company {
   id: string                    // Unique company ID
-  name: string                  // Required
+  name: string                  // Required, unique in the system
   address: CompanyAddress       // Required
   email: string                 // Required
   phone: string                 // Required
@@ -168,16 +167,3 @@ interface CompleteRegistration {
 - **Scalability**: The structure allows adding more fields in the future without breaking the base structure
 - **Flexibility**: Optional fields allow companies of different sizes to register comfortably
 - **Basic validation**: Focuses on essential validations; more complex validations can be added later
-
----
-
-## Questions to Review
-
-Before implementing, confirm:
-
-1. Are all address fields required or can some be optional?
-2. Should the creator user's phone be required or can it be optional?
-3. Do we need to validate that the corporate email domain matches a website if provided?
-4. Are there any additional fields we should consider from the start?
-5. Should the company name be unique in the system?
-6. **User multi-organization support**: Confirmed - Users can belong to multiple organizations. The system will support switching between organizations for users with multiple memberships.
