@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Container,
@@ -27,22 +27,9 @@ import {
 } from '@mui/icons-material'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
 import { AppHeader } from '@app/components/AppHeader'
-
-// Mock data types - replace with actual API types later
-interface User {
-  id: string
-  name: string
-  email: string
-  phone?: string
-  createdAt: string
-}
-
-interface CompanyMembership {
-  companyId: string
-  companyName: string
-  role: string
-  joinedAt: string
-}
+import type { User, CompanyMembership } from '@app/types'
+import { getRoleLabel, getRoleColor } from '@app/utils/roleUtils'
+import { formatDate } from '@app/utils/dateUtils'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -104,12 +91,46 @@ export default function ProfilePage() {
             companyName: 'Tech Solutions Inc.',
             role: 'admin',
             joinedAt: '2024-01-15T10:30:00Z',
+            company: {
+              id: '1',
+              name: 'Tech Solutions Inc.',
+              email: 'contact@techsolutions.com',
+              phone: '+1 (555) 123-4567',
+              address: {
+                street: 'Av. Reforma 123',
+                city: 'Ciudad de México',
+                state: 'Ciudad de México',
+                postalCode: '06600',
+                country: 'México',
+              },
+              website: 'https://www.techsolutions.com',
+              description: 'Empresa líder en soluciones tecnológicas innovadoras',
+              industry: 'Tecnología',
+              createdAt: '2024-01-15T10:30:00Z',
+            },
           },
           {
             companyId: '2',
             companyName: 'Digital Agency',
             role: 'member',
             joinedAt: '2024-02-20T14:15:00Z',
+            company: {
+              id: '2',
+              name: 'Digital Agency',
+              email: 'info@digitalagency.com',
+              phone: '+1 (555) 987-6543',
+              address: {
+                street: 'Calle Libertad 456',
+                city: 'Guadalajara',
+                state: 'Jalisco',
+                postalCode: '44100',
+                country: 'México',
+              },
+              website: 'https://www.digitalagency.com',
+              description: 'Agencia digital especializada en marketing y diseño',
+              industry: 'Marketing',
+              createdAt: '2024-02-20T14:15:00Z',
+            },
           },
         ]
 
@@ -120,8 +141,9 @@ export default function ProfilePage() {
           email: mockUser.email,
           phone: mockUser.phone || '',
         })
-      } catch (error: any) {
-        showError('Error al cargar la información del usuario')
+      } catch (error) {
+        const apiError = error as { message?: string }
+        showError(apiError.message || 'Error al cargar la información del usuario')
         console.error('Error fetching user data:', error)
       } finally {
         setLoading(false)
@@ -131,63 +153,48 @@ export default function ProfilePage() {
     fetchUserData()
   }, [showError])
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
-  }
+  }, [])
 
-  const handleFormChange = (field: string, value: string) => {
+  const handleFormChange = useCallback((field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+  }, [])
 
-  const handleSavePersonalInfo = async () => {
+  const handleSavePersonalInfo = useCallback(async () => {
     try {
       // TODO: Replace with actual API call
       console.log('Saving personal info:', formData)
       await new Promise((resolve) => setTimeout(resolve, 500))
       showSuccess('Información personal actualizada correctamente')
-    } catch (error: any) {
-      showError('Error al actualizar la información personal')
+    } catch (error) {
+      const apiError = error as { message?: string }
+      showError(apiError.message || 'Error al actualizar la información personal')
     }
-  }
+  }, [formData, showSuccess, showError])
 
-  const handleRequestPasswordRecovery = async () => {
+  const handleRequestPasswordRecovery = useCallback(async () => {
+    if (!user?.email) return
+
     try {
       // TODO: Replace with actual API call
-      console.log('Requesting password recovery for:', user?.email)
+      console.log('Requesting password recovery for:', user.email)
       await new Promise((resolve) => setTimeout(resolve, 500))
       showSuccess('Se ha enviado un enlace de recuperación a tu correo electrónico')
-    } catch (error: any) {
-      showError('Error al solicitar recuperación de contraseña')
+    } catch (error) {
+      const apiError = error as { message?: string }
+      showError(apiError.message || 'Error al solicitar recuperación de contraseña')
     }
-  }
+  }, [user?.email, showSuccess, showError])
 
-  const getRoleLabel = (role: string) => {
-    const roleMap: Record<string, string> = {
-      admin: 'Administrador',
-      member: 'Miembro',
-      viewer: 'Visor',
-    }
-    return roleMap[role] || role
-  }
-
-  const getRoleColor = (role: string): 'primary' | 'default' | 'secondary' | 'success' => {
-    const colorMap: Record<string, 'primary' | 'default' | 'secondary' | 'success'> = {
-      admin: 'primary',
-      member: 'default',
-      viewer: 'secondary',
-    }
-    return colorMap[role] || 'default'
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const locale = 'es-ES'
-    return date.toLocaleDateString(locale, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+  const handleResetForm = useCallback(() => {
+    if (!user) return
+    setFormData({
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
     })
-  }
+  }, [user])
 
   if (loading) {
     return (
@@ -353,13 +360,7 @@ export default function ProfilePage() {
                       <Grid size={{ xs: 12 }}>
                         <Divider sx={{ my: 2 }} />
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                          <Button variant="outlined" onClick={() => {
-                            setFormData({
-                              name: user?.name || '',
-                              email: user?.email || '',
-                              phone: user?.phone || '',
-                            })
-                          }}>
+                          <Button variant="outlined" onClick={handleResetForm}>
                             Cancelar
                           </Button>
                           <Button variant="contained" onClick={handleSavePersonalInfo}>

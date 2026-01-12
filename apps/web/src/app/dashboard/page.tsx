@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Container,
@@ -27,29 +27,9 @@ import {
 } from '@mui/icons-material'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
 import { AppHeader } from '@app/components/AppHeader'
-
-// Mock data types - replace with actual API types later
-interface CompanyMembership {
-  companyId: string
-  companyName: string
-  role: string
-  joinedAt: string
-  company: {
-    email: string
-    phone: string
-    address: {
-      street: string
-      city: string
-      state: string
-      postalCode: string
-      country: string
-    }
-    website?: string
-    description?: string
-    industry?: string
-    createdAt: string
-  }
-}
+import type { CompanyMembership } from '@app/types'
+import { getRoleLabel, getRoleColor } from '@app/utils/roleUtils'
+import { formatDate } from '@app/utils/dateUtils'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -75,6 +55,8 @@ export default function DashboardPage() {
             role: 'admin',
             joinedAt: '2024-01-15T10:30:00Z',
             company: {
+              id: '1',
+              name: 'Tech Solutions Inc.',
               email: 'contact@techsolutions.com',
               phone: '+1 (555) 123-4567',
               address: {
@@ -96,6 +78,8 @@ export default function DashboardPage() {
             role: 'member',
             joinedAt: '2024-02-20T14:15:00Z',
             company: {
+              id: '2',
+              name: 'Digital Agency',
               email: 'info@digitalagency.com',
               phone: '+1 (555) 987-6543',
               address: {
@@ -118,8 +102,9 @@ export default function DashboardPage() {
         if (mockCompanies.length > 0) {
           setSelectedCompanyId(mockCompanies[0].companyId)
         }
-      } catch (error: any) {
-        showError('Error al cargar la información')
+      } catch (error) {
+        const apiError = error as { message?: string }
+        showError(apiError.message || 'Error al cargar la información')
         console.error('Error fetching user data:', error)
       } finally {
         setLoading(false)
@@ -129,34 +114,14 @@ export default function DashboardPage() {
     fetchUserData()
   }, [showError])
 
-  const getRoleLabel = (role: string) => {
-    const roleMap: Record<string, string> = {
-      admin: 'Administrador',
-      member: 'Miembro',
-      viewer: 'Visor',
-    }
-    return roleMap[role] || role
-  }
+  const handleCompanyChange = useCallback((companyId: string) => {
+    setSelectedCompanyId(companyId)
+  }, [])
 
-  const getRoleColor = (role: string): 'primary' | 'default' | 'secondary' | 'success' => {
-    const colorMap: Record<string, 'primary' | 'default' | 'secondary' | 'success'> = {
-      admin: 'primary',
-      member: 'default',
-      viewer: 'secondary',
-    }
-    return colorMap[role] || 'default'
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-  }
-
-  const selectedCompany = companies.find((c) => c.companyId === selectedCompanyId)
+  const selectedCompany = useMemo(
+    () => companies.find((c) => c.companyId === selectedCompanyId),
+    [companies, selectedCompanyId]
+  )
 
   if (loading) {
     return (
@@ -247,7 +212,7 @@ export default function DashboardPage() {
                         id="company-select"
                         value={selectedCompanyId}
                         label="Seleccionar organización"
-                        onChange={(e) => setSelectedCompanyId(e.target.value)}
+                        onChange={(e) => handleCompanyChange(e.target.value)}
                       >
                         {companies.map((company) => (
                           <MenuItem key={company.companyId} value={company.companyId}>

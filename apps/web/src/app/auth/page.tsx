@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Container, Grid, Typography, Button, Box, Tabs, Tab, Divider } from "@mui/material"
+import { Container, Grid, Typography, Button, Box, Tabs, Tab } from "@mui/material"
 import Link from 'next/link'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import { companyRegistrationConfig, transformRegistrationData } from './companyRegistrationConfig'
@@ -37,12 +37,21 @@ export default function AuthPage() {
       
       // Redirect to dashboard
       router.push('/dashboard')
-    } catch (error: any) {
+    } catch (error) {
       // Handle API errors
-      if (error.response?.data?.errors) {
-        setExternalErrors(error.response.data.errors)
+      const apiError = error as {
+        response?: {
+          data?: {
+            errors?: Record<string, string>
+          }
+        }
+        message?: string
+      }
+
+      if (apiError.response?.data?.errors) {
+        setExternalErrors(apiError.response.data.errors)
       } else {
-        showError(error.message || 'Ocurrió un error. Por favor intenta de nuevo.')
+        showError(apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.')
       }
     } finally {
       setLoading(false)
@@ -66,12 +75,21 @@ export default function AuthPage() {
       // Handle successful registration
       // Redirect to dashboard or success page
       // router.push('/dashboard')
-    } catch (error: any) {
+    } catch (error) {
       // Handle API errors
-      if (error.response?.data?.errors) {
-        setExternalErrors(error.response.data.errors)
+      const apiError = error as {
+        response?: {
+          data?: {
+            errors?: Record<string, string>
+          }
+        }
+        message?: string
+      }
+
+      if (apiError.response?.data?.errors) {
+        setExternalErrors(apiError.response.data.errors)
       } else {
-        showError(error.message || 'Ocurrió un error. Por favor intenta de nuevo.')
+        showError(apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.')
       }
     } finally {
       setLoading(false)
