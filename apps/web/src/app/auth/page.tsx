@@ -5,6 +5,7 @@ import { Container, Grid, Typography, Button, Box, Tabs, Tab, Divider } from "@m
 import Link from 'next/link'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import { companyRegistrationConfig, transformRegistrationData } from './companyRegistrationConfig'
+import { loginConfig } from './loginConfig'
 
 export default function AuthPage() {
   const [tabValue, setTabValue] = useState(0)
@@ -14,6 +15,34 @@ export default function AuthPage() {
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
     setExternalErrors({}) // Clear errors when switching tabs
+  }
+
+  const handleLogin = async (data: FormData) => {
+    setLoading(true)
+    setExternalErrors({})
+
+    try {
+      // TODO: Replace with actual API call
+      console.log('Login data:', data)
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Handle successful login
+      // Redirect to dashboard
+      // router.push('/dashboard')
+    } catch (error: any) {
+      // Handle API errors
+      if (error.response?.data?.errors) {
+        setExternalErrors(error.response.data.errors)
+      } else {
+        setExternalErrors({
+          _general: error.message || 'Ocurrió un error. Por favor intenta de nuevo.',
+        })
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleCompanyRegistration = async (data: FormData) => {
@@ -108,16 +137,26 @@ export default function AuthPage() {
           {/* Sign In Form */}
           {tabValue === 0 && (
             <Grid size={{ xs: 12 }}>
-              <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {/* TODO: Replace with DynamicForm for sign in */}
-                <Typography
-                  variant="body1"
-                  color="text.secondary"
-                  sx={{ textAlign: 'center', py: 4 }}
+              {externalErrors._general && (
+                <Box
+                  sx={{
+                    mb: 3,
+                    p: 2,
+                    borderRadius: 1,
+                    bgcolor: 'error.dark',
+                    color: 'error.contrastText',
+                  }}
                 >
-                  El formulario de inicio de sesión se implementará aquí
-                </Typography>
-              </Box>
+                  <Typography variant="body2">{externalErrors._general}</Typography>
+                </Box>
+              )}
+
+              <DynamicForm
+                config={loginConfig}
+                onSubmit={handleLogin}
+                loading={loading}
+                errors={externalErrors}
+              />
             </Grid>
           )}
 
