@@ -26,6 +26,7 @@ import {
   CalendarToday as CalendarIcon,
   Edit as EditIcon,
   Close as CloseIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
 import { AppHeader } from '@app/components/AppHeader'
@@ -211,6 +212,25 @@ export default function ProfilePage() {
     }
   }, [user?.email, showSuccess, showError])
 
+  const handleLogout = useCallback(async () => {
+    try {
+      // TODO: Replace with actual API call to invalidate session
+      console.log('Logging out user')
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      
+      // Clear any local state if needed
+      // TODO: Clear authentication tokens, user data, etc.
+      
+      showSuccess('Sesión cerrada correctamente')
+      
+      // Redirect to auth page
+      router.push('/auth')
+    } catch (error) {
+      const apiError = error as { message?: string }
+      showError(apiError.message || 'Error al cerrar sesión')
+    }
+  }, [router, showSuccess, showError])
+
 
   if (loading) {
     return (
@@ -287,7 +307,7 @@ export default function ProfilePage() {
                     <Tab
                       icon={<LockIcon />}
                       iconPosition="start"
-                      label="Seguridad"
+                      label="Seguridad y Sesión"
                       id="profile-tab-2"
                       aria-controls="profile-tabpanel-2"
                     />
@@ -439,10 +459,10 @@ export default function ProfilePage() {
                     <Grid container spacing={3}>
                       <Grid size={{ xs: 12 }}>
                         <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                          Seguridad y Contraseña
+                          Seguridad y Sesión
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                          Gestiona la seguridad de tu cuenta
+                          Gestiona la seguridad de tu cuenta y cierra tu sesión
                         </Typography>
                       </Grid>
 
@@ -488,6 +508,34 @@ export default function ProfilePage() {
                             <Typography variant="caption" color="text.secondary">
                               El enlace de recuperación se enviará a este correo
                             </Typography>
+                          </CardContent>
+                        </Card>
+                      </Grid>
+
+                      <Grid size={{ xs: 12 }}>
+                        <Divider sx={{ my: 2 }} />
+                        <Card variant="outlined" sx={{ borderColor: 'error.main' }}>
+                          <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                              <LogoutIcon color="error" />
+                              <Box sx={{ flex: 1 }}>
+                                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                                  Cerrar Sesión
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Cierra tu sesión actual y regresa a la página de inicio de sesión
+                                </Typography>
+                              </Box>
+                            </Box>
+                            <Button
+                              variant="contained"
+                              color="error"
+                              startIcon={<LogoutIcon />}
+                              onClick={handleLogout}
+                              sx={{ mt: 1 }}
+                            >
+                              Cerrar sesión
+                            </Button>
                           </CardContent>
                         </Card>
                       </Grid>
