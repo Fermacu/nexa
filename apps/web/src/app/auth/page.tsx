@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Container, Grid, Typography, Button, Box, Tabs, Tab } from "@mui/material"
 import Link from 'next/link'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
-import { companyRegistrationConfig, transformRegistrationData } from './companyRegistrationConfig'
+import { registrationConfig, transformRegistrationData } from './registrationConfig'
 import { loginConfig } from './loginConfig'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
 
@@ -170,7 +170,7 @@ export default function AuthPage() {
           {tabValue === 1 && (
             <Grid size={{ xs: 12 }}>
               <DynamicForm
-                config={companyRegistrationConfig}
+                config={registrationConfig}
                 onSubmit={handleCompanyRegistration}
                 loading={loading}
                 errors={externalErrors}
