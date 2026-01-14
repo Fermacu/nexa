@@ -16,6 +16,8 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Drawer,
+  IconButton,
 } from '@mui/material'
 import {
   Email as EmailIcon,
@@ -24,19 +26,29 @@ import {
   LocationOn as LocationIcon,
   Language as LanguageIcon,
   Description as DescriptionIcon,
+  Edit as EditIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
 import { AppHeader } from '@app/components/AppHeader'
+import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import type { CompanyMembership } from '@app/types'
 import { getRoleLabel, getRoleColor } from '@app/utils/roleUtils'
 import { formatDate } from '@app/utils/dateUtils'
+import {
+  companyEditConfig,
+  transformCompanyToFormData,
+  transformFormDataToCompany,
+} from './companyEditConfig'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { showError } = useGlobalAlert()
+  const { showError, showSuccess } = useGlobalAlert()
   const [loading, setLoading] = useState(true)
   const [companies, setCompanies] = useState<CompanyMembership[]>([])
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('')
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editLoading, setEditLoading] = useState(false)
 
   useEffect(() => {
     // TODO: Replace with actual API call
@@ -118,9 +130,64 @@ export default function DashboardPage() {
     setSelectedCompanyId(companyId)
   }, [])
 
+  const handleOpenDrawer = useCallback(() => {
+    setDrawerOpen(true)
+  }, [])
+
+  const handleCloseDrawer = useCallback(() => {
+    setDrawerOpen(false)
+  }, [])
+
   const selectedCompany = useMemo(
     () => companies.find((c) => c.companyId === selectedCompanyId),
     [companies, selectedCompanyId]
+  )
+
+  const isAdmin = useMemo(
+    () => selectedCompany?.role === 'admin',
+    [selectedCompany?.role]
+  )
+
+  const handleSaveCompany = useCallback(
+    async (formData: FormData) => {
+      if (!selectedCompany) return
+
+      try {
+        setEditLoading(true)
+        
+        // Transform form data to company update format
+        const updateData = transformFormDataToCompany(formData)
+
+        // TODO: Replace with actual API call
+        console.log('Updating company:', selectedCompany.companyId, updateData)
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        // Update local state
+        setCompanies((prevCompanies) =>
+          prevCompanies.map((c) =>
+            c.companyId === selectedCompany.companyId
+              ? {
+                  ...c,
+                  companyName: updateData.name,
+                  company: {
+                    ...c.company,
+                    ...updateData,
+                  },
+                }
+              : c
+          )
+        )
+
+        showSuccess('Información de la empresa actualizada correctamente')
+        handleCloseDrawer()
+      } catch (error) {
+        const apiError = error as { message?: string }
+        showError(apiError.message || 'Error al actualizar la información de la empresa')
+      } finally {
+        setEditLoading(false)
+      }
+    },
+    [selectedCompany, showSuccess, showError, handleCloseDrawer]
   )
 
   if (loading) {
@@ -240,19 +307,31 @@ export default function DashboardPage() {
             <Grid size={{ xs: 12 }}>
               <Card>
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                    <BusinessIcon sx={{ mr: 1, color: 'primary.main', fontSize: 32 }} />
-                    <Box>
-                      <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
-                        {selectedCompany.companyName}
-                      </Typography>
-                      <Chip
-                        label={getRoleLabel(selectedCompany.role)}
-                        color={getRoleColor(selectedCompany.role)}
-                        size="small"
-                        sx={{ mt: 0.5 }}
-                      />
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <BusinessIcon sx={{ mr: 1, color: 'primary.main', fontSize: 32 }} />
+                      <Box>
+                        <Typography variant="h5" component="h2" sx={{ fontWeight: 600 }}>
+                          {selectedCompany.companyName}
+                        </Typography>
+                        <Chip
+                          label={getRoleLabel(selectedCompany.role)}
+                          color={getRoleColor(selectedCompany.role)}
+                          size="small"
+                          sx={{ mt: 0.5 }}
+                        />
+                      </Box>
                     </Box>
+                    {isAdmin && (
+                      <Button
+                        variant="outlined"
+                        startIcon={<EditIcon />}
+                        onClick={handleOpenDrawer}
+                        sx={{ textTransform: 'none' }}
+                      >
+                        Editar información
+                      </Button>
+                    )}
                   </Box>
 
                   <Divider sx={{ my: 2 }} />
@@ -377,6 +456,43 @@ export default function DashboardPage() {
           </Grid>
         </Container>
       </Box>
+
+      {/* Edit Company Drawer */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={handleCloseDrawer}
+        ModalProps={{
+          sx: {
+            zIndex: (theme) => theme.zIndex.drawer + 2,
+          },
+        }}
+        PaperProps={{
+          sx: {
+            width: { xs: '100%', sm: 500 },
+            p: 3,
+            zIndex: (theme) => theme.zIndex.drawer + 2,
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Editar información de la empresa
+          </Typography>
+          <IconButton onClick={handleCloseDrawer} aria-label="close">
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
+        {selectedCompany && (
+          <DynamicForm
+            config={companyEditConfig}
+            onSubmit={handleSaveCompany}
+            initialValues={transformCompanyToFormData(selectedCompany.company)}
+            loading={editLoading}
+          />
+        )}
+      </Drawer>
     </Box>
   )
 }
