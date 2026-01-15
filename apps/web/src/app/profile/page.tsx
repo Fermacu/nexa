@@ -14,8 +14,8 @@ import {
   Button,
   Tabs,
   Tab,
-  TextField,
-  InputAdornment,
+  Drawer,
+  IconButton,
 } from '@mui/material'
 import {
   Person as PersonIcon,
@@ -24,12 +24,20 @@ import {
   Business as BusinessIcon,
   Lock as LockIcon,
   CalendarToday as CalendarIcon,
+  Edit as EditIcon,
+  Close as CloseIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
 import { AppHeader } from '@app/components/AppHeader'
+import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import type { User, CompanyMembership } from '@app/types'
 import { getRoleLabel, getRoleColor } from '@app/utils/roleUtils'
 import { formatDate } from '@app/utils/dateUtils'
+import {
+  personalInfoConfig,
+  transformUserToFormData,
+} from './personalInfoConfig'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -60,13 +68,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
   const [companies, setCompanies] = useState<CompanyMembership[]>([])
-  
-  // Form states for personal info
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-  })
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editLoading, setEditLoading] = useState(false)
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -136,11 +139,6 @@ export default function ProfilePage() {
 
         setUser(mockUser)
         setCompanies(mockCompanies)
-        setFormData({
-          name: mockUser.name,
-          email: mockUser.email,
-          phone: mockUser.phone || '',
-        })
       } catch (error) {
         const apiError = error as { message?: string }
         showError(apiError.message || 'Error al cargar la información del usuario')
@@ -157,21 +155,48 @@ export default function ProfilePage() {
     setTabValue(newValue)
   }, [])
 
-  const handleFormChange = useCallback((field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+  const handleOpenDrawer = useCallback(() => {
+    setDrawerOpen(true)
   }, [])
 
-  const handleSavePersonalInfo = useCallback(async () => {
-    try {
-      // TODO: Replace with actual API call
-      console.log('Saving personal info:', formData)
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      showSuccess('Información personal actualizada correctamente')
-    } catch (error) {
-      const apiError = error as { message?: string }
-      showError(apiError.message || 'Error al actualizar la información personal')
-    }
-  }, [formData, showSuccess, showError])
+  const handleCloseDrawer = useCallback(() => {
+    setDrawerOpen(false)
+  }, [])
+
+  const handleSavePersonalInfo = useCallback(
+    async (formData: FormData) => {
+      if (!user) return
+
+      try {
+        setEditLoading(true)
+        
+        // TODO: Replace with actual API call
+        console.log('Updating personal info:', formData)
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        // Update local state
+        setUser((prevUser) =>
+          prevUser
+            ? {
+                ...prevUser,
+                name: formData.name as string,
+                email: formData.email as string,
+                phone: (formData.phone as string) || undefined,
+              }
+            : null
+        )
+
+        showSuccess('Información personal actualizada correctamente')
+        handleCloseDrawer()
+      } catch (error) {
+        const apiError = error as { message?: string }
+        showError(apiError.message || 'Error al actualizar la información personal')
+      } finally {
+        setEditLoading(false)
+      }
+    },
+    [user, showSuccess, showError, handleCloseDrawer]
+  )
 
   const handleRequestPasswordRecovery = useCallback(async () => {
     if (!user?.email) return
@@ -187,14 +212,25 @@ export default function ProfilePage() {
     }
   }, [user?.email, showSuccess, showError])
 
-  const handleResetForm = useCallback(() => {
-    if (!user) return
-    setFormData({
-      name: user.name,
-      email: user.email,
-      phone: user.phone || '',
-    })
-  }, [user])
+  const handleLogout = useCallback(async () => {
+    try {
+      // TODO: Replace with actual API call to invalidate session
+      console.log('Logging out user')
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      
+      // Clear any local state if needed
+      // TODO: Clear authentication tokens, user data, etc.
+      
+      showSuccess('Sesión cerrada correctamente')
+      
+      // Redirect to auth page
+      router.push('/auth')
+    } catch (error) {
+      const apiError = error as { message?: string }
+      showError(apiError.message || 'Error al cerrar sesión')
+    }
+  }, [router, showSuccess, showError])
+
 
   if (loading) {
     return (
@@ -271,7 +307,7 @@ export default function ProfilePage() {
                     <Tab
                       icon={<LockIcon />}
                       iconPosition="start"
-                      label="Seguridad"
+                      label="Seguridad y Sesión"
                       id="profile-tab-2"
                       aria-controls="profile-tabpanel-2"
                     />
@@ -283,70 +319,72 @@ export default function ProfilePage() {
                   <TabPanel value={tabValue} index={0}>
                     <Grid container spacing={3}>
                       <Grid size={{ xs: 12 }}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                          Información Personal
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                          Actualiza tu información personal y de contacto
-                        </Typography>
-                      </Grid>
-
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                          fullWidth
-                          label="Nombre completo"
-                          value={formData.name}
-                          onChange={(e) => handleFormChange('name', e.target.value)}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <PersonIcon sx={{ color: 'text.secondary' }} />
-                              </InputAdornment>
-                            ),
-                          }}
-                        />
-                      </Grid>
-
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                          fullWidth
-                          label="Correo electrónico"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => handleFormChange('email', e.target.value)}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <EmailIcon sx={{ color: 'text.secondary' }} />
-                              </InputAdornment>
-                            ),
-                          }}
-                          helperText="Este correo se usa para iniciar sesión"
-                        />
-                      </Grid>
-
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <TextField
-                          fullWidth
-                          label="Teléfono"
-                          type="tel"
-                          value={formData.phone}
-                          onChange={(e) => handleFormChange('phone', e.target.value)}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <PhoneIcon sx={{ color: 'text.secondary' }} />
-                              </InputAdornment>
-                            ),
-                          }}
-                          helperText="Opcional, se usa para recuperación de cuenta"
-                        />
-                      </Grid>
-
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pt: 2 }}>
-                          <CalendarIcon color="action" />
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                           <Box>
+                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                              Información Personal
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Tu información personal y de contacto
+                            </Typography>
+                          </Box>
+                          <Button
+                            variant="outlined"
+                            startIcon={<EditIcon />}
+                            onClick={handleOpenDrawer}
+                            sx={{ textTransform: 'none' }}
+                          >
+                            Editar información
+                          </Button>
+                        </Box>
+                      </Grid>
+
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'start', gap: 1 }}>
+                          <PersonIcon color="action" sx={{ mt: 0.5 }} />
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              Nombre completo
+                            </Typography>
+                            <Typography variant="body1">{user?.name || '-'}</Typography>
+                          </Box>
+                        </Box>
+                      </Grid>
+
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'start', gap: 1 }}>
+                          <EmailIcon color="action" sx={{ mt: 0.5 }} />
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              Correo electrónico
+                            </Typography>
+                            <Typography variant="body1">{user?.email || '-'}</Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                              Este correo se usa para iniciar sesión
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Grid>
+
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'start', gap: 1 }}>
+                          <PhoneIcon color="action" sx={{ mt: 0.5 }} />
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              Teléfono
+                            </Typography>
+                            <Typography variant="body1">{user?.phone || 'No proporcionado'}</Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                              Opcional, se usa para recuperación de cuenta
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Grid>
+
+                      <Grid size={{ xs: 12, md: 6 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'start', gap: 1 }}>
+                          <CalendarIcon color="action" sx={{ mt: 0.5 }} />
+                          <Box sx={{ flex: 1 }}>
                             <Typography variant="caption" color="text.secondary">
                               Miembro desde
                             </Typography>
@@ -354,18 +392,6 @@ export default function ProfilePage() {
                               {user ? formatDate(user.createdAt) : '-'}
                             </Typography>
                           </Box>
-                        </Box>
-                      </Grid>
-
-                      <Grid size={{ xs: 12 }}>
-                        <Divider sx={{ my: 2 }} />
-                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                          <Button variant="outlined" onClick={handleResetForm}>
-                            Cancelar
-                          </Button>
-                          <Button variant="contained" onClick={handleSavePersonalInfo}>
-                            Guardar cambios
-                          </Button>
                         </Box>
                       </Grid>
                     </Grid>
@@ -433,10 +459,10 @@ export default function ProfilePage() {
                     <Grid container spacing={3}>
                       <Grid size={{ xs: 12 }}>
                         <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                          Seguridad y Contraseña
+                          Seguridad y Sesión
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                          Gestiona la seguridad de tu cuenta
+                          Gestiona la seguridad de tu cuenta y cierra tu sesión
                         </Typography>
                       </Grid>
 
@@ -485,6 +511,34 @@ export default function ProfilePage() {
                           </CardContent>
                         </Card>
                       </Grid>
+
+                      <Grid size={{ xs: 12 }}>
+                        <Divider sx={{ my: 2 }} />
+                        <Card variant="outlined" sx={{ borderColor: 'error.main' }}>
+                          <CardContent>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                              <LogoutIcon color="error" />
+                              <Box sx={{ flex: 1 }}>
+                                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                                  Cerrar Sesión
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  Cierra tu sesión actual y regresa a la página de inicio de sesión
+                                </Typography>
+                              </Box>
+                            </Box>
+                            <Button
+                              variant="contained"
+                              color="error"
+                              startIcon={<LogoutIcon />}
+                              onClick={handleLogout}
+                              sx={{ mt: 1 }}
+                            >
+                              Cerrar sesión
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      </Grid>
                     </Grid>
                   </TabPanel>
                 </CardContent>
@@ -493,6 +547,43 @@ export default function ProfilePage() {
           </Grid>
         </Container>
       </Box>
+
+      {/* Edit Personal Info Drawer */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={handleCloseDrawer}
+        ModalProps={{
+          sx: {
+            zIndex: (theme) => theme.zIndex.drawer + 2,
+          },
+        }}
+        PaperProps={{
+          sx: {
+            width: { xs: '100%', sm: 500 },
+            p: 3,
+            zIndex: (theme) => theme.zIndex.drawer + 2,
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Editar información personal
+          </Typography>
+          <IconButton onClick={handleCloseDrawer} aria-label="close">
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
+        {user && (
+          <DynamicForm
+            config={personalInfoConfig}
+            onSubmit={handleSavePersonalInfo}
+            initialValues={transformUserToFormData(user)}
+            loading={editLoading}
+          />
+        )}
+      </Drawer>
     </Box>
   )
 }

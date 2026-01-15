@@ -1,72 +1,19 @@
 /**
- * Company Registration Form Configuration
+ * Shared Company Form Fields Configuration
  * 
- * Form configuration for company registration based on company-structure.md
- * This follows modern SaaS standards for user and company onboarding.
+ * This file contains the shared field definitions for company forms.
+ * Used by both registration and edit forms to ensure consistency.
  */
 
-import { DynamicFormConfig } from '@app/components/DynamicForm'
+import { FieldConfig } from '@app/components/DynamicForm'
 import { COUNTRIES, INDUSTRIES } from '@app/constants'
 
-export const companyRegistrationConfig: DynamicFormConfig = {
-  fields: [
-    // Section: Creator User Information
-    {
-      name: 'userName',
-      label: 'Nombre completo',
-      type: 'text',
-      placeholder: 'Ingresa tu nombre completo',
-      validation: {
-        required: true,
-        minLength: 2,
-        maxLength: 100,
-      },
-      helperText: 'Este será el nombre de tu cuenta',
-    },
-    {
-      name: 'userEmail',
-      label: 'Correo electrónico',
-      type: 'email',
-      placeholder: 'tu@ejemplo.com',
-      validation: {
-        required: true,
-        email: true,
-      },
-      helperText: 'Se usará para iniciar sesión y verificación de cuenta',
-    },
-    {
-      name: 'userPassword',
-      label: 'Contraseña',
-      type: 'password',
-      placeholder: 'Crea una contraseña segura',
-      validation: {
-        required: true,
-        minLength: 8,
-        custom: (value) => {
-          if (!value) return null
-          const hasUpperCase = /[A-Z]/.test(value)
-          const hasLowerCase = /[a-z]/.test(value)
-          const hasNumber = /\d/.test(value)
-          if (!hasUpperCase || !hasLowerCase || !hasNumber) {
-            return 'La contraseña debe contener mayúsculas, minúsculas y números'
-          }
-          return null
-        },
-      },
-      helperText: 'Mínimo 8 caracteres con mayúsculas, minúsculas y números',
-    },
-    {
-      name: 'userPhone',
-      label: 'Número de teléfono',
-      type: 'tel',
-      placeholder: '+1 (555) 123-4567',
-      validation: {
-        required: false,
-      },
-      helperText: 'Opcional, se usa para recuperación de cuenta',
-    },
-
-    // Section: Company Information
+/**
+ * Get company form fields configuration
+ * These fields are shared between registration and edit forms
+ */
+export function getCompanyFormFields(): FieldConfig[] {
+  return [
     {
       name: 'companyName',
       label: 'Nombre de la empresa',
@@ -100,8 +47,6 @@ export const companyRegistrationConfig: DynamicFormConfig = {
       },
       helperText: 'Teléfono principal de la empresa',
     },
-
-    // Section: Company Address
     {
       name: 'street',
       label: 'Dirección',
@@ -155,8 +100,6 @@ export const companyRegistrationConfig: DynamicFormConfig = {
         required: true,
       },
     },
-
-    // Section: Optional Company Information
     {
       name: 'website',
       label: 'Sitio web',
@@ -164,7 +107,7 @@ export const companyRegistrationConfig: DynamicFormConfig = {
       placeholder: 'https://www.empresa.com',
       validation: {
         required: false,
-        custom: (value) => {
+        custom: (value: any) => {
           if (!value) return null
           try {
             new URL(value)
@@ -198,38 +141,59 @@ export const companyRegistrationConfig: DynamicFormConfig = {
       },
       helperText: 'Descripción breve opcional (máximo 500 caracteres)',
     },
-  ],
-  spacing: 3,
-  submitLabel: 'Crear cuenta',
-  resetOnSubmit: false,
-  showSubmitButton: true,
+  ]
 }
 
 /**
- * Transform form data to API format
+ * Transform company data to form format
  */
-export function transformRegistrationData(formData: Record<string, any>) {
+export function transformCompanyToFormData(company: {
+  name: string
+  email: string
+  phone: string
+  address: {
+    street: string
+    city: string
+    state: string
+    postalCode: string
+    country: string
+  }
+  website?: string
+  description?: string
+  industry?: string
+}) {
   return {
-    user: {
-      name: formData.userName,
-      email: formData.userEmail,
-      password: formData.userPassword,
-      phone: formData.userPhone || undefined,
+    companyName: company.name,
+    companyEmail: company.email,
+    companyPhone: company.phone,
+    street: company.address.street,
+    city: company.address.city,
+    state: company.address.state,
+    postalCode: company.address.postalCode,
+    country: company.address.country,
+    website: company.website || '',
+    industry: company.industry || '',
+    description: company.description || '',
+  }
+}
+
+/**
+ * Transform form data to company update format
+ */
+export function transformFormDataToCompany(formData: Record<string, any>) {
+  return {
+    name: formData.companyName,
+    email: formData.companyEmail,
+    phone: formData.companyPhone,
+    address: {
+      street: formData.street,
+      city: formData.city,
+      state: formData.state,
+      postalCode: formData.postalCode,
+      country: formData.country,
     },
-    company: {
-      name: formData.companyName,
-      email: formData.companyEmail,
-      phone: formData.companyPhone,
-      address: {
-        street: formData.street,
-        city: formData.city,
-        state: formData.state,
-        postalCode: formData.postalCode,
-        country: formData.country,
-      },
-      website: formData.website || undefined,
-      industry: formData.industry || undefined,
-      description: formData.description || undefined,
-    },
+    website: formData.website || undefined,
+    industry: formData.industry || undefined,
+    description: formData.description || undefined,
   }
 }
