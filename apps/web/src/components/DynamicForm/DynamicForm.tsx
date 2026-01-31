@@ -106,6 +106,9 @@ export function DynamicForm({
 
       // If there are errors, don't submit
       if (Object.keys(validationErrors).length > 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[DynamicForm] Envío bloqueado por validación:', validationErrors)
+        }
         return
       }
 

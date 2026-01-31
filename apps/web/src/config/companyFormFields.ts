@@ -95,7 +95,7 @@ export function getCompanyFormFields(): FieldConfig[] {
       name: 'country',
       label: 'País',
       type: 'select',
-      options: COUNTRIES,
+      options: [{ value: '', label: 'Selecciona un país' }, ...COUNTRIES],
       validation: {
         required: true,
       },
