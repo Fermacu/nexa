@@ -107,18 +107,6 @@ export default function Home() {
                 </Button>
               </Link>
               <Button
-                variant="outlined"
-                size="large"
-                sx={{
-                  px: 4,
-                  py: 1.5,
-                  fontSize: "1rem",
-                  textTransform: "none",
-                }}
-              >
-                Solicitar demo
-              </Button>
-              <Button
                 variant="text"
                 size="large"
                 sx={{
