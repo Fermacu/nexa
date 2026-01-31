@@ -1,3 +1,5 @@
+import type { Request } from 'express'
+
 // User Types
 export interface User {
     id: string
@@ -40,7 +42,7 @@ export interface User {
   }
   
   // Request with authenticated user
-  export interface AuthenticatedRequest extends Express.Request {
+  export interface AuthenticatedRequest extends Request {
     user?: {
       uid: string
       email?: string
