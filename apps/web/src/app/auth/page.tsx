@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Container, Grid, Typography, Button, Box, Tabs, Tab } from "@mui/material"
+import { Container, Grid, Typography, Button, Box, Tabs, Tab, CircularProgress } from "@mui/material"
 import Link from 'next/link'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import { registrationConfig, transformRegistrationData } from './registrationConfig'
@@ -25,7 +25,15 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false)
   const [externalErrors, setExternalErrors] = useState<Record<string, string>>({})
   const { showError, showSuccess } = useGlobalAlert()
-  const { login, register } = useAuth()
+  const { user, loading: authLoading, login, register } = useAuth()
+
+  // Si ya hay sesión (JWT), redirigir al dashboard
+  useEffect(() => {
+    if (authLoading) return
+    if (user) {
+      router.replace('/dashboard')
+    }
+  }, [user, authLoading, router])
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
@@ -85,6 +93,14 @@ export default function AuthPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (authLoading || user) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    )
   }
 
   return (

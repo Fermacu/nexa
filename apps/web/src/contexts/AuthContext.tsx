@@ -14,7 +14,7 @@ import {
   onAuthStateChanged,
   type User as FirebaseUser,
 } from 'firebase/auth'
-import { auth } from '@app/config/firebase'
+import { getAuth } from '@app/config/firebase'
 import { registerUser as apiRegister } from '@app/lib/api'
 
 interface AuthContextValue {
@@ -61,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
+    const auth = getAuth()
     if (!auth) {
       setLoading(false)
       return
@@ -75,7 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      if (!auth) throw new Error('Firebase Auth no está configurado')
+      const auth = getAuth()
+      if (!auth) throw new Error('Firebase Auth no está configurado. Añade NEXT_PUBLIC_FIREBASE_* en .env.local y reinicia el servidor.')
       await signInWithEmailAndPassword(auth, email, password)
       const currentUser = auth.currentUser
       if (currentUser) await refreshToken(currentUser)
@@ -95,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const logout = useCallback(async () => {
+    const auth = getAuth()
     if (auth) await firebaseSignOut(auth)
     setUser(null)
     setToken(null)
@@ -102,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getToken = useCallback(async () => {
     if (!user) return null
-    const t = await user.getIdToken()
+    const t = await user.getIdToken(true)
     setToken(t)
     return t
   }, [user])
