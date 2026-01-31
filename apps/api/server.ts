@@ -1,8 +1,5 @@
-import dotenv from 'dotenv'
+import './src/config/env'
 import app from './src/app'
-
-// Load environment variables
-dotenv.config()
 
 const PORT = process.env.PORT || 3001
 
