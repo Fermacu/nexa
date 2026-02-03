@@ -1,13 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Container, Grid, Typography, Button, Box, Tabs, Tab } from "@mui/material"
+import { Container, Grid, Typography, Button, Box, Tabs, Tab, CircularProgress } from "@mui/material"
 import Link from 'next/link'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import { registrationConfig, transformRegistrationData } from './registrationConfig'
 import { loginConfig } from './loginConfig'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
+import { useAuth } from '@app/contexts/AuthContext'
+
+type ApiError = {
+  response?: { data?: { error?: { errors?: Record<string, string> } } }
+  message?: string
+}
+
+function getFieldErrors(error: ApiError): Record<string, string> | null {
+  return error.response?.data?.error?.errors ?? null
+}
 
 export default function AuthPage() {
   const router = useRouter()
@@ -15,43 +25,45 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false)
   const [externalErrors, setExternalErrors] = useState<Record<string, string>>({})
   const { showError, showSuccess } = useGlobalAlert()
+  const { user, loading: authLoading, login, register } = useAuth()
+
+  // Si ya hay sesión (JWT), redirigir al dashboard
+  useEffect(() => {
+    if (authLoading) return
+    if (user) {
+      router.replace('/dashboard')
+    }
+  }, [user, authLoading, router])
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
-    setExternalErrors({}) // Clear errors when switching tabs
+    setExternalErrors({})
   }
 
   const handleLogin = async (data: FormData) => {
     setLoading(true)
     setExternalErrors({})
+    const email = String(data.email ?? '')
+    const password = String(data.password ?? '')
 
     try {
-      // TODO: Replace with actual API call
-      console.log('Login data:', data)
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Handle successful login
+      await login(email, password)
       showSuccess('Inicio de sesión exitoso')
-      
-      // Redirect to dashboard
       router.push('/dashboard')
     } catch (error) {
-      // Handle API errors
-      const apiError = error as {
-        response?: {
-          data?: {
-            errors?: Record<string, string>
-          }
-        }
-        message?: string
-      }
-
-      if (apiError.response?.data?.errors) {
-        setExternalErrors(apiError.response.data.errors)
+      const apiError = error as ApiError
+      const fieldErrors = getFieldErrors(apiError)
+      if (fieldErrors) {
+        setExternalErrors(fieldErrors)
       } else {
-        showError(apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.')
+        const msg = apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.'
+        if (msg.includes('auth/invalid-credential') || msg.includes('invalid-credential')) {
+          showError('Correo o contraseña incorrectos.')
+        } else if (msg.includes('auth/user-not-found')) {
+          showError('No existe una cuenta con este correo.')
+        } else {
+          showError(msg)
+        }
       }
     } finally {
       setLoading(false)
@@ -63,37 +75,32 @@ export default function AuthPage() {
     setExternalErrors({})
 
     try {
-      // Transform form data to API format
       const registrationData = transformRegistrationData(data)
-
-      // TODO: Replace with actual API call
-      console.log('Registration data:', registrationData)
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Handle successful registration
-      // Redirect to dashboard or success page
-      // router.push('/dashboard')
-    } catch (error) {
-      // Handle API errors
-      const apiError = error as {
-        response?: {
-          data?: {
-            errors?: Record<string, string>
-          }
-        }
-        message?: string
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Auth] Enviando registro al API...', registrationData.user?.email)
       }
-
-      if (apiError.response?.data?.errors) {
-        setExternalErrors(apiError.response.data.errors)
+      await register(registrationData)
+      showSuccess('Cuenta creada correctamente. Bienvenido.')
+      router.push('/dashboard')
+    } catch (error) {
+      const apiError = error as ApiError
+      const fieldErrors = getFieldErrors(apiError)
+      if (fieldErrors) {
+        setExternalErrors(fieldErrors)
       } else {
         showError(apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.')
       }
     } finally {
       setLoading(false)
     }
+  }
+
+  if (authLoading || user) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    )
   }
 
   return (

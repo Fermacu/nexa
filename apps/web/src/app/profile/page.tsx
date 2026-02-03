@@ -29,6 +29,7 @@ import {
   Logout as LogoutIcon,
 } from '@mui/icons-material'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
+import { useAuth } from '@app/contexts/AuthContext'
 import { AppHeader } from '@app/components/AppHeader'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import type { User, CompanyMembership } from '@app/types'
@@ -64,6 +65,7 @@ function TabPanel(props: TabPanelProps) {
 export default function ProfilePage() {
   const router = useRouter()
   const { showError, showSuccess } = useGlobalAlert()
+  const { logout } = useAuth()
   const [tabValue, setTabValue] = useState(0)
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
@@ -214,22 +216,14 @@ export default function ProfilePage() {
 
   const handleLogout = useCallback(async () => {
     try {
-      // TODO: Replace with actual API call to invalidate session
-      console.log('Logging out user')
-      await new Promise((resolve) => setTimeout(resolve, 300))
-      
-      // Clear any local state if needed
-      // TODO: Clear authentication tokens, user data, etc.
-      
+      await logout()
       showSuccess('Sesión cerrada correctamente')
-      
-      // Redirect to auth page
       router.push('/auth')
     } catch (error) {
       const apiError = error as { message?: string }
       showError(apiError.message || 'Error al cerrar sesión')
     }
-  }, [router, showSuccess, showError])
+  }, [logout, router, showSuccess, showError])
 
 
   if (loading) {
