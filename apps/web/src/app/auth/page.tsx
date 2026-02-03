@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Container, Grid, Typography, Button, Box, Tabs, Tab } from "@mui/material"
+import { Container, Grid, Typography, Button, Box, Tabs, Tab, CircularProgress } from "@mui/material"
 import Link from 'next/link'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import { registrationConfig, transformRegistrationData } from './registrationConfig'
@@ -29,12 +29,14 @@ export default function AuthPage() {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
-    setExternalErrors({}) // Clear errors when switching tabs
+    setExternalErrors({})
   }
 
   const handleLogin = async (data: FormData) => {
     setLoading(true)
     setExternalErrors({})
+    const email = String(data.email ?? '')
+    const password = String(data.password ?? '')
 
     try {
       // Call the actual API
@@ -58,7 +60,14 @@ export default function AuthPage() {
       if (apiError.errors) {
         setExternalErrors(apiError.errors)
       } else {
-        showError(apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.')
+        const msg = apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.'
+        if (msg.includes('auth/invalid-credential') || msg.includes('invalid-credential')) {
+          showError('Correo o contraseña incorrectos.')
+        } else if (msg.includes('auth/user-not-found')) {
+          showError('No existe una cuenta con este correo.')
+        } else {
+          showError(msg)
+        }
       }
     } finally {
       setLoading(false)
@@ -70,7 +79,6 @@ export default function AuthPage() {
     setExternalErrors({})
 
     try {
-      // Transform form data to API format
       const registrationData = transformRegistrationData(data)
 
       // Call the actual API
@@ -93,6 +101,14 @@ export default function AuthPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (authLoading || user) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    )
   }
 
   return (

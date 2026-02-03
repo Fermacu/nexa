@@ -31,6 +31,7 @@ import {
   Logout as LogoutIcon,
 } from '@mui/icons-material'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
+import { useAuth } from '@app/contexts/AuthContext'
 import { AppHeader } from '@app/components/AppHeader'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import type { User, CompanyMembership } from '@app/types'
@@ -68,6 +69,7 @@ function TabPanel(props: TabPanelProps) {
 export default function ProfilePage() {
   const router = useRouter()
   const { showError, showSuccess } = useGlobalAlert()
+  const { logout } = useAuth()
   const [tabValue, setTabValue] = useState(0)
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)

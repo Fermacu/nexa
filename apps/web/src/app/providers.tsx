@@ -9,12 +9,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <GlobalAlertProvider>
-        <AuthProvider>
+      <AuthProvider>
+        <GlobalAlertProvider>
           {children}
           <GlobalAlert />
-        </AuthProvider>
-      </GlobalAlertProvider>
+        </GlobalAlertProvider>
+      </AuthProvider>
     </ThemeProvider>
   )
 }
