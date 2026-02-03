@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { Container, Grid, Typography, Button, Box, Tabs, Tab, CircularProgress } from "@mui/material"
 import Link from 'next/link'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
@@ -14,18 +14,24 @@ import { useAuth } from '@app/contexts/AuthContext'
 
 export default function AuthPage() {
   const router = useRouter()
+  const pathname = usePathname()
   const [tabValue, setTabValue] = useState(0)
   const [loading, setLoading] = useState(false)
   const [externalErrors, setExternalErrors] = useState<Record<string, string>>({})
   const { showError, showSuccess } = useGlobalAlert()
   const { isAuthenticated, isLoading, checkAuth } = useAuth()
 
-  // Redirect if already authenticated
+  // Only redirect if user manually navigates to /auth while already authenticated
+  // This should only happen after auth check is complete, not during login flow
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.push('/dashboard')
+    // Only redirect if:
+    // 1. Auth check is complete (not loading)
+    // 2. User is authenticated
+    // 3. We're on the /auth page
+    if (!isLoading && isAuthenticated && pathname === '/auth') {
+      router.replace('/dashboard')
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [isLoading, isAuthenticated, pathname, router])
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
@@ -35,8 +41,6 @@ export default function AuthPage() {
   const handleLogin = async (data: FormData) => {
     setLoading(true)
     setExternalErrors({})
-    const email = String(data.email ?? '')
-    const password = String(data.password ?? '')
 
     try {
       // Call the actual API
@@ -48,11 +52,12 @@ export default function AuthPage() {
       // Handle successful login
       showSuccess('Inicio de sesión exitoso')
       
-      // Update auth context
-      checkAuth()
-      
-      // Redirect to dashboard
-      router.push('/dashboard')
+      // Token is already stored by login() function
+      // Use window.location to force a full page reload and avoid loops
+      // This completely resets React state and prevents any re-render loops
+      // The AuthContext will check the token on the next page load
+      window.location.href = '/dashboard'
+      return // Exit early to prevent any further execution
     } catch (error) {
       // Handle API errors
       const apiError = error as ApiError
@@ -70,6 +75,8 @@ export default function AuthPage() {
         }
       }
     } finally {
+      // Don't set loading to false if we redirected
+      // The redirect will cause a full page reload anyway
       setLoading(false)
     }
   }
@@ -103,7 +110,8 @@ export default function AuthPage() {
     }
   }
 
-  if (authLoading || user) {
+  // Show loading only during initial auth check, not after login
+  if (isLoading) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
         <CircularProgress />

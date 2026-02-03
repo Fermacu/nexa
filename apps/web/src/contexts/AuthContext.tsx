@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { getAuthToken, removeAuthToken } from '@app/services/auth'
 
@@ -20,40 +20,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check authentication status on mount
   useEffect(() => {
-    checkAuthStatus()
-  }, [])
-
-  const checkAuthStatus = () => {
     const token = getAuthToken()
     setIsAuthenticated(!!token)
     setIsLoading(false)
-  }
+  }, [])
 
-  const checkAuth = (): boolean => {
+  const checkAuth = useCallback((): boolean => {
     const token = getAuthToken()
     const authenticated = !!token
     setIsAuthenticated(authenticated)
+    setIsLoading(false)
     return authenticated
-  }
+  }, [])
 
-  const logout = () => {
+  const logout = useCallback(() => {
     removeAuthToken()
     setIsAuthenticated(false)
     router.push('/auth')
-  }
+  }, [router])
 
-  return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated,
-        isLoading,
-        logout,
-        checkAuth,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      isAuthenticated,
+      isLoading,
+      logout,
+      checkAuth,
+    }),
+    [isAuthenticated, isLoading, logout, checkAuth]
   )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

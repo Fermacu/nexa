@@ -31,7 +31,6 @@ import {
   Logout as LogoutIcon,
 } from '@mui/icons-material'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
-import { useAuth } from '@app/contexts/AuthContext'
 import { AppHeader } from '@app/components/AppHeader'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import type { User, CompanyMembership } from '@app/types'
@@ -100,7 +99,8 @@ export default function ProfilePage() {
     }
 
     fetchUserData()
-  }, [showError])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
@@ -191,8 +191,6 @@ export default function ProfilePage() {
     }
   }, [user?.email, showSuccess, showError])
 
-  const { logout } = useAuth()
-  
   const handleLogout = useCallback(async () => {
     try {
       showSuccess('Sesión cerrada correctamente')

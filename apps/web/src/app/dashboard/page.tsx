@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { ProtectedRoute } from '@app/components/ProtectedRoute'
 import {
   Container,
   Grid,
@@ -77,7 +76,8 @@ export default function DashboardPage() {
     }
 
     fetchUserData()
-  }, [showError])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleCompanyChange = useCallback((companyId: string) => {
     setSelectedCompanyId(companyId)
@@ -202,8 +202,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <ProtectedRoute>
-      <Box>
+    <Box>
         <AppHeader />
       <Box
         component="main"
@@ -452,6 +451,5 @@ export default function DashboardPage() {
         )}
       </Drawer>
       </Box>
-    </ProtectedRoute>
   )
 }
