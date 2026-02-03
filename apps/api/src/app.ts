@@ -4,6 +4,8 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import 'express-async-errors';
 import { authRoutes } from './routes/auth';
+import { userRoutes } from './routes/users';
+import { companyRoutes } from './routes/companies';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -27,8 +29,8 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
-// app.use('/api/users', userRoutes)
-// app.use('/api/companies', companyRoutes)
+app.use('/api/users', userRoutes);
+app.use('/api/companies', companyRoutes);
 
 // 404 handler
 app.use((req, res) => {

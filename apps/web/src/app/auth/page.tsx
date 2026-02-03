@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Container, Grid, Typography, Button, Box, Tabs, Tab } from "@mui/material"
 import Link from 'next/link'
@@ -8,6 +8,9 @@ import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import { registrationConfig, transformRegistrationData } from './registrationConfig'
 import { loginConfig } from './loginConfig'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
+import { login, register } from '@app/services/auth'
+import type { ApiError } from '@app/services/api'
+import { useAuth } from '@app/contexts/AuthContext'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -15,6 +18,14 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false)
   const [externalErrors, setExternalErrors] = useState<Record<string, string>>({})
   const { showError, showSuccess } = useGlobalAlert()
+  const { isAuthenticated, isLoading, checkAuth } = useAuth()
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push('/dashboard')
+    }
+  }, [isAuthenticated, isLoading, router])
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
@@ -26,30 +37,26 @@ export default function AuthPage() {
     setExternalErrors({})
 
     try {
-      // TODO: Replace with actual API call
-      console.log('Login data:', data)
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Call the actual API
+      await login({
+        email: data.email as string,
+        password: data.password as string,
+      })
 
       // Handle successful login
       showSuccess('Inicio de sesión exitoso')
+      
+      // Update auth context
+      checkAuth()
       
       // Redirect to dashboard
       router.push('/dashboard')
     } catch (error) {
       // Handle API errors
-      const apiError = error as {
-        response?: {
-          data?: {
-            errors?: Record<string, string>
-          }
-        }
-        message?: string
-      }
+      const apiError = error as ApiError
 
-      if (apiError.response?.data?.errors) {
-        setExternalErrors(apiError.response.data.errors)
+      if (apiError.errors) {
+        setExternalErrors(apiError.errors)
       } else {
         showError(apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.')
       }
@@ -66,28 +73,20 @@ export default function AuthPage() {
       // Transform form data to API format
       const registrationData = transformRegistrationData(data)
 
-      // TODO: Replace with actual API call
-      console.log('Registration data:', registrationData)
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Call the actual API
+      await register(registrationData)
 
       // Handle successful registration
-      // Redirect to dashboard or success page
-      // router.push('/dashboard')
+      showSuccess('Cuenta creada correctamente. Ya puedes iniciar sesión.')
+      
+      // Switch to login tab
+      setTabValue(0)
     } catch (error) {
       // Handle API errors
-      const apiError = error as {
-        response?: {
-          data?: {
-            errors?: Record<string, string>
-          }
-        }
-        message?: string
-      }
+      const apiError = error as ApiError
 
-      if (apiError.response?.data?.errors) {
-        setExternalErrors(apiError.response.data.errors)
+      if (apiError.errors) {
+        setExternalErrors(apiError.errors)
       } else {
         showError(apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.')
       }
