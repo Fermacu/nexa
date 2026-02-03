@@ -1,130 +1,61 @@
 'use client'
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from 'react'
-import {
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  type User as FirebaseUser,
-} from 'firebase/auth'
-import { getAuth } from '@app/config/firebase'
-import { registerUser as apiRegister } from '@app/lib/api'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
+import { useRouter } from 'next/navigation'
+import { getAuthToken, removeAuthToken } from '@app/services/auth'
 
-interface AuthContextValue {
-  user: FirebaseUser | null
-  token: string | null
-  loading: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (data: {
-    user: { name: string; email: string; password: string; phone?: string }
-    company: {
-      name: string
-      email: string
-      phone: string
-      address: { street: string; city: string; state: string; postalCode: string; country: string }
-      website?: string
-      industry?: string
-      description?: string
-    }
-  }) => Promise<void>
-  logout: () => Promise<void>
-  getToken: () => Promise<string | null>
+interface AuthContextType {
+  isAuthenticated: boolean
+  isLoading: boolean
+  logout: () => void
+  checkAuth: () => boolean
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null)
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<FirebaseUser | null>(null)
-  const [token, setToken] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
 
-  const refreshToken = useCallback(async (firebaseUser: FirebaseUser | null) => {
-    if (!firebaseUser) {
-      setToken(null)
-      return null
-    }
-    try {
-      const t = await firebaseUser.getIdToken()
-      setToken(t)
-      return t
-    } catch {
-      setToken(null)
-      return null
-    }
-  }, [])
-
+  // Check authentication status on mount
   useEffect(() => {
-    const auth = getAuth()
-    if (!auth) {
-      setLoading(false)
-      return
-    }
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser)
-      await refreshToken(firebaseUser)
-      setLoading(false)
-    })
-    return () => unsubscribe()
-  }, [refreshToken])
-
-  const login = useCallback(
-    async (email: string, password: string) => {
-      const auth = getAuth()
-      if (!auth) throw new Error('Firebase Auth no está configurado. Añade NEXT_PUBLIC_FIREBASE_* en .env.local y reinicia el servidor.')
-      await signInWithEmailAndPassword(auth, email, password)
-      const currentUser = auth.currentUser
-      if (currentUser) await refreshToken(currentUser)
-    },
-    [refreshToken]
-  )
-
-  const register = useCallback(
-    async (data: Parameters<AuthContextValue['register']>[0]) => {
-      await apiRegister(data)
-      if (!auth) throw new Error('Firebase Auth no está configurado')
-      await signInWithEmailAndPassword(auth, data.user.email, data.user.password)
-      const currentUser = auth.currentUser
-      if (currentUser) await refreshToken(currentUser)
-    },
-    [refreshToken]
-  )
-
-  const logout = useCallback(async () => {
-    const auth = getAuth()
-    if (auth) await firebaseSignOut(auth)
-    setUser(null)
-    setToken(null)
+    const token = getAuthToken()
+    setIsAuthenticated(!!token)
+    setIsLoading(false)
   }, [])
 
-  const getToken = useCallback(async () => {
-    if (!user) return null
-    const t = await user.getIdToken(true)
-    setToken(t)
-    return t
-  }, [user])
+  const checkAuth = useCallback((): boolean => {
+    const token = getAuthToken()
+    const authenticated = !!token
+    setIsAuthenticated(authenticated)
+    setIsLoading(false)
+    return authenticated
+  }, [])
 
-  const value: AuthContextValue = {
-    user,
-    token,
-    loading,
-    login,
-    register,
-    logout,
-    getToken,
-  }
+  const logout = useCallback(() => {
+    removeAuthToken()
+    setIsAuthenticated(false)
+    router.push('/auth')
+  }, [router])
+
+  const value = useMemo(
+    () => ({
+      isAuthenticated,
+      isLoading,
+      logout,
+      checkAuth,
+    }),
+    [isAuthenticated, isLoading, logout, checkAuth]
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth debe usarse dentro de AuthProvider')
-  return ctx
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
 }

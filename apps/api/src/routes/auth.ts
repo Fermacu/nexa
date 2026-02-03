@@ -1,10 +1,11 @@
-import express, { Router } from 'express'
-import { body, validationResult } from 'express-validator'
-import * as authController from '../controllers/authController'
-import { ValidationError } from '../utils/errors'
+import { Router } from 'express';
+import { body, validationResult } from 'express-validator';
+import * as authController from '../controllers/authController';
+import { ValidationError } from '../utils/errors';
 
-const router = Router()
+const router = Router();
 
+// Validation for registration
 const registerValidation = [
   body('user').isObject().withMessage('user is required'),
   body('user.name').trim().isLength({ min: 2, max: 100 }).withMessage('Nombre entre 2 y 100 caracteres'),
@@ -24,7 +25,13 @@ const registerValidation = [
   body('company.website').optional().isURL().withMessage('URL de sitio web válida'),
   body('company.industry').optional().trim(),
   body('company.description').optional().trim().isLength({ max: 500 }).withMessage('Descripción máximo 500 caracteres'),
-]
+];
+
+// Validation for login
+const loginValidation = [
+  body('email').isEmail().normalizeEmail().withMessage('Correo electrónico válido requerido'),
+  body('password').notEmpty().withMessage('Contraseña requerida'),
+];
 
 // Map API field paths to frontend form field names
 const fieldPathToFormName: Record<string, string> = {
@@ -43,22 +50,51 @@ const fieldPathToFormName: Record<string, string> = {
   'company.website': 'website',
   'company.industry': 'industry',
   'company.description': 'description',
+  'email': 'email',
+  'password': 'password',
+};
+
+// Helper function to format validation errors
+function formatValidationErrors(errors: any[]): Record<string, string> {
+  const fieldErrors: Record<string, string> = {};
+  errors.forEach((err) => {
+    const path = err.path || err.param;
+    if (path) {
+      const formName = fieldPathToFormName[path] ?? path;
+      fieldErrors[formName] = err.msg;
+    }
+  });
+  return fieldErrors;
 }
 
-router.post('/register', registerValidation, (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const errors = validationResult(req)
-  if (!errors.isEmpty()) {
-    const fieldErrors: Record<string, string> = {}
-    errors.array().forEach((err: any) => {
-      const path = err.path || err.param
-      if (path) {
-        const formName = fieldPathToFormName[path] ?? path
-        fieldErrors[formName] = err.msg
-      }
-    })
-    throw new ValidationError('Error de validación', fieldErrors)
-  }
-  next()
-}, authController.register)
+// Register route
+router.post(
+  '/register',
+  registerValidation,
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const fieldErrors = formatValidationErrors(errors.array());
+      throw new ValidationError('Error de validación', fieldErrors);
+    }
+    next();
+  },
+  authController.registerController
+);
 
-export const authRoutes = router
+// Login route
+router.post(
+  '/login',
+  loginValidation,
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const fieldErrors = formatValidationErrors(errors.array());
+      throw new ValidationError('Error de validación', fieldErrors);
+    }
+    next();
+  },
+  authController.loginController
+);
+
+export const authRoutes = router;

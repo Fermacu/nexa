@@ -1,39 +1,37 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { Container, Grid, Typography, Button, Box, Tabs, Tab, CircularProgress } from "@mui/material"
 import Link from 'next/link'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import { registrationConfig, transformRegistrationData } from './registrationConfig'
 import { loginConfig } from './loginConfig'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
+import { login, register } from '@app/services/auth'
+import type { ApiError } from '@app/services/api'
 import { useAuth } from '@app/contexts/AuthContext'
-
-type ApiError = {
-  response?: { data?: { error?: { errors?: Record<string, string> } } }
-  message?: string
-}
-
-function getFieldErrors(error: ApiError): Record<string, string> | null {
-  return error.response?.data?.error?.errors ?? null
-}
 
 export default function AuthPage() {
   const router = useRouter()
+  const pathname = usePathname()
   const [tabValue, setTabValue] = useState(0)
   const [loading, setLoading] = useState(false)
   const [externalErrors, setExternalErrors] = useState<Record<string, string>>({})
   const { showError, showSuccess } = useGlobalAlert()
-  const { user, loading: authLoading, login, register } = useAuth()
+  const { isAuthenticated, isLoading, checkAuth } = useAuth()
 
-  // Si ya hay sesión (JWT), redirigir al dashboard
+  // Only redirect if user manually navigates to /auth while already authenticated
+  // This should only happen after auth check is complete, not during login flow
   useEffect(() => {
-    if (authLoading) return
-    if (user) {
+    // Only redirect if:
+    // 1. Auth check is complete (not loading)
+    // 2. User is authenticated
+    // 3. We're on the /auth page
+    if (!isLoading && isAuthenticated && pathname === '/auth') {
       router.replace('/dashboard')
     }
-  }, [user, authLoading, router])
+  }, [isLoading, isAuthenticated, pathname, router])
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
@@ -43,18 +41,29 @@ export default function AuthPage() {
   const handleLogin = async (data: FormData) => {
     setLoading(true)
     setExternalErrors({})
-    const email = String(data.email ?? '')
-    const password = String(data.password ?? '')
 
     try {
-      await login(email, password)
+      // Call the actual API
+      await login({
+        email: data.email as string,
+        password: data.password as string,
+      })
+
+      // Handle successful login
       showSuccess('Inicio de sesión exitoso')
-      router.push('/dashboard')
+      
+      // Token is already stored by login() function
+      // Use window.location to force a full page reload and avoid loops
+      // This completely resets React state and prevents any re-render loops
+      // The AuthContext will check the token on the next page load
+      window.location.href = '/dashboard'
+      return // Exit early to prevent any further execution
     } catch (error) {
+      // Handle API errors
       const apiError = error as ApiError
-      const fieldErrors = getFieldErrors(apiError)
-      if (fieldErrors) {
-        setExternalErrors(fieldErrors)
+
+      if (apiError.errors) {
+        setExternalErrors(apiError.errors)
       } else {
         const msg = apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.'
         if (msg.includes('auth/invalid-credential') || msg.includes('invalid-credential')) {
@@ -66,6 +75,8 @@ export default function AuthPage() {
         }
       }
     } finally {
+      // Don't set loading to false if we redirected
+      // The redirect will cause a full page reload anyway
       setLoading(false)
     }
   }
@@ -76,17 +87,21 @@ export default function AuthPage() {
 
     try {
       const registrationData = transformRegistrationData(data)
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Auth] Enviando registro al API...', registrationData.user?.email)
-      }
+
+      // Call the actual API
       await register(registrationData)
-      showSuccess('Cuenta creada correctamente. Bienvenido.')
-      router.push('/dashboard')
+
+      // Handle successful registration
+      showSuccess('Cuenta creada correctamente. Ya puedes iniciar sesión.')
+      
+      // Switch to login tab
+      setTabValue(0)
     } catch (error) {
+      // Handle API errors
       const apiError = error as ApiError
-      const fieldErrors = getFieldErrors(apiError)
-      if (fieldErrors) {
-        setExternalErrors(fieldErrors)
+
+      if (apiError.errors) {
+        setExternalErrors(apiError.errors)
       } else {
         showError(apiError.message || 'Ocurrió un error. Por favor intenta de nuevo.')
       }
@@ -95,7 +110,8 @@ export default function AuthPage() {
     }
   }
 
-  if (authLoading || user) {
+  // Show loading only during initial auth check, not after login
+  if (isLoading) {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
         <CircularProgress />

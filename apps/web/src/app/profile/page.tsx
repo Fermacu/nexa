@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { ProtectedRoute } from '@app/components/ProtectedRoute'
+import { useAuth } from '@app/contexts/AuthContext'
 import {
   Container,
   Grid,
@@ -29,7 +31,6 @@ import {
   Logout as LogoutIcon,
 } from '@mui/icons-material'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
-import { useAuth } from '@app/contexts/AuthContext'
 import { AppHeader } from '@app/components/AppHeader'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
 import type { User, CompanyMembership } from '@app/types'
@@ -39,6 +40,8 @@ import {
   personalInfoConfig,
   transformUserToFormData,
 } from './personalInfoConfig'
+import { getCurrentUser, updateCurrentUser, getCurrentUserCompanies } from '@app/services/userService'
+import type { ApiError } from '@app/services/api'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -78,71 +81,16 @@ export default function ProfilePage() {
       try {
         setLoading(true)
         
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        // Get user and companies from API
+        const [userData, companiesData] = await Promise.all([
+          getCurrentUser(),
+          getCurrentUserCompanies(),
+        ])
 
-        // Mock data - replace with actual API response
-        const mockUser: User = {
-          id: '1',
-          name: 'Juan Pérez',
-          email: 'juan@example.com',
-          phone: '+1 (555) 123-4567',
-          createdAt: '2024-01-15T10:30:00Z',
-        }
-
-        const mockCompanies: CompanyMembership[] = [
-          {
-            companyId: '1',
-            companyName: 'Tech Solutions Inc.',
-            role: 'admin',
-            joinedAt: '2024-01-15T10:30:00Z',
-            company: {
-              id: '1',
-              name: 'Tech Solutions Inc.',
-              email: 'contact@techsolutions.com',
-              phone: '+1 (555) 123-4567',
-              address: {
-                street: 'Av. Reforma 123',
-                city: 'Ciudad de México',
-                state: 'Ciudad de México',
-                postalCode: '06600',
-                country: 'México',
-              },
-              website: 'https://www.techsolutions.com',
-              description: 'Empresa líder en soluciones tecnológicas innovadoras',
-              industry: 'Tecnología',
-              createdAt: '2024-01-15T10:30:00Z',
-            },
-          },
-          {
-            companyId: '2',
-            companyName: 'Digital Agency',
-            role: 'member',
-            joinedAt: '2024-02-20T14:15:00Z',
-            company: {
-              id: '2',
-              name: 'Digital Agency',
-              email: 'info@digitalagency.com',
-              phone: '+1 (555) 987-6543',
-              address: {
-                street: 'Calle Libertad 456',
-                city: 'Guadalajara',
-                state: 'Jalisco',
-                postalCode: '44100',
-                country: 'México',
-              },
-              website: 'https://www.digitalagency.com',
-              description: 'Agencia digital especializada en marketing y diseño',
-              industry: 'Marketing',
-              createdAt: '2024-02-20T14:15:00Z',
-            },
-          },
-        ]
-
-        setUser(mockUser)
-        setCompanies(mockCompanies)
+        setUser(userData)
+        setCompanies(companiesData)
       } catch (error) {
-        const apiError = error as { message?: string }
+        const apiError = error as ApiError
         showError(apiError.message || 'Error al cargar la información del usuario')
         console.error('Error fetching user data:', error)
       } finally {
@@ -151,7 +99,8 @@ export default function ProfilePage() {
     }
 
     fetchUserData()
-  }, [showError])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleTabChange = useCallback((_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
@@ -172,27 +121,26 @@ export default function ProfilePage() {
       try {
         setEditLoading(true)
         
-        // TODO: Replace with actual API call
-        console.log('Updating personal info:', formData)
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        // Update user via API
+        const updatedUser = await updateCurrentUser({
+          name: formData.name as string,
+          email: formData.email as string,
+          phone: (formData.phone as string) || undefined,
+        })
 
         // Update local state
-        setUser((prevUser) =>
-          prevUser
-            ? {
-                ...prevUser,
-                name: formData.name as string,
-                email: formData.email as string,
-                phone: (formData.phone as string) || undefined,
-              }
-            : null
-        )
+        setUser(updatedUser)
 
         showSuccess('Información personal actualizada correctamente')
         handleCloseDrawer()
       } catch (error) {
-        const apiError = error as { message?: string }
-        showError(apiError.message || 'Error al actualizar la información personal')
+        const apiError = error as ApiError
+        if (apiError.errors) {
+          // Handle validation errors if needed
+          showError(apiError.message || 'Error al actualizar la información personal')
+        } else {
+          showError(apiError.message || 'Error al actualizar la información personal')
+        }
       } finally {
         setEditLoading(false)
       }
@@ -204,32 +152,61 @@ export default function ProfilePage() {
     if (!user?.email) return
 
     try {
-      // TODO: Replace with actual API call
-      console.log('Requesting password recovery for:', user.email)
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      showSuccess('Se ha enviado un enlace de recuperación a tu correo electrónico')
+      // Use Firebase Auth REST API for password recovery
+      const apiKey = process.env.NEXT_PUBLIC_FIREBASE_WEB_API_KEY;
+      if (!apiKey) {
+        showError('Configuración de Firebase no disponible');
+        return;
+      }
+
+      const response = await fetch(
+        `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requestType: 'PASSWORD_RESET',
+            email: user.email,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        if (result.error?.message?.includes('EMAIL_NOT_FOUND')) {
+          showError('No se encontró una cuenta con este correo electrónico');
+        } else {
+          showError(result.error?.message || 'Error al solicitar recuperación de contraseña');
+        }
+        return;
+      }
+
+      showSuccess('Se ha enviado un enlace de recuperación a tu correo electrónico');
     } catch (error) {
-      const apiError = error as { message?: string }
-      showError(apiError.message || 'Error al solicitar recuperación de contraseña')
+      const apiError = error as { message?: string };
+      showError(apiError.message || 'Error al solicitar recuperación de contraseña');
     }
   }, [user?.email, showSuccess, showError])
 
   const handleLogout = useCallback(async () => {
     try {
-      await logout()
       showSuccess('Sesión cerrada correctamente')
-      router.push('/auth')
+      logout()
     } catch (error) {
       const apiError = error as { message?: string }
       showError(apiError.message || 'Error al cerrar sesión')
     }
-  }, [logout, router, showSuccess, showError])
+  }, [logout, showSuccess, showError])
 
 
   if (loading) {
     return (
-      <Box>
-        <AppHeader />
+      <ProtectedRoute>
+        <Box>
+          <AppHeader />
         <Box
           component="main"
           sx={{
@@ -243,12 +220,14 @@ export default function ProfilePage() {
           </Container>
         </Box>
       </Box>
+      </ProtectedRoute>
     )
   }
 
   return (
-    <Box>
-      <AppHeader />
+    <ProtectedRoute>
+      <Box>
+        <AppHeader />
       <Box
         component="main"
         sx={{
@@ -578,6 +557,7 @@ export default function ProfilePage() {
           />
         )}
       </Drawer>
-    </Box>
+      </Box>
+    </ProtectedRoute>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
 import { Box, CircularProgress } from '@mui/material'
 import { useAuth } from '@app/contexts/AuthContext'
 
@@ -11,16 +11,24 @@ import { useAuth } from '@app/contexts/AuthContext'
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const router = useRouter()
-  const { user, loading } = useAuth()
+  const pathname = usePathname()
+  const { isAuthenticated, isLoading } = useAuth()
+  const hasRedirected = useRef(false)
 
   useEffect(() => {
-    if (loading) return
-    if (!user) {
+    // Only redirect once if not authenticated and not already on /auth
+    if (!isLoading && !isAuthenticated && pathname !== '/auth' && !hasRedirected.current) {
+      hasRedirected.current = true
       router.replace('/auth')
     }
-  }, [user, loading, router])
+  }, [isAuthenticated, isLoading, pathname, router])
 
-  if (loading) {
+  // Reset redirect flag when pathname changes (user navigates)
+  useEffect(() => {
+    hasRedirected.current = false
+  }, [pathname])
+
+  if (isLoading) {
     return (
       <Box
         sx={{
@@ -35,7 +43,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     )
   }
 
-  if (!user) {
+  if (!isAuthenticated) {
     return null
   }
 

@@ -15,25 +15,25 @@ export class ValidationError extends AppError {
   errors?: Record<string, string>;
 
   constructor(message: string, errors?: Record<string, string>) {
-    super(message, 400, "VALIDATION_ERROR");
+    super(message, 400, 'VALIDATION_ERROR');
     this.errors = errors;
   }
 }
 
 export class NotFoundError extends AppError {
-  constructor(resource: string = "Resource") {
-    super(`${resource} not found`, 404, "NOT_FOUND");
+  constructor(resource: string = 'Resource') {
+    super(`${resource} not found`, 404, 'NOT_FOUND');
   }
 }
 
 export class UnauthorizedError extends AppError {
-  constructor(message: string = "Unauthorized") {
-    super(message, 401, "UNAUTHORIZED");
+  constructor(message: string = 'Unauthorized') {
+    super(message, 401, 'UNAUTHORIZED');
   }
 }
 
 export class ForbiddenError extends AppError {
-  constructor(message: string = "Forbidden") {
-    super(message, 403, "FORBIDDEN");
+  constructor(message: string = 'Forbidden') {
+    super(message, 403, 'FORBIDDEN');
   }
 }

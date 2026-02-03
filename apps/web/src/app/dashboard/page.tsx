@@ -40,6 +40,9 @@ import {
   transformCompanyToFormData,
   transformFormDataToCompany,
 } from './companyEditConfig'
+import { getCurrentUserCompanies } from '@app/services/userService'
+import { updateCompany } from '@app/services/companyService'
+import type { ApiError } from '@app/services/api'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -51,71 +54,20 @@ export default function DashboardPage() {
   const [editLoading, setEditLoading] = useState(false)
 
   useEffect(() => {
-    // TODO: Replace with actual API call
     const fetchUserData = async () => {
       try {
         setLoading(true)
         
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        // Get user's companies from API
+        const companies = await getCurrentUserCompanies()
 
-        // Mock data - replace with actual API response
-        const mockCompanies: CompanyMembership[] = [
-          {
-            companyId: '1',
-            companyName: 'Tech Solutions Inc.',
-            role: 'admin',
-            joinedAt: '2024-01-15T10:30:00Z',
-            company: {
-              id: '1',
-              name: 'Tech Solutions Inc.',
-              email: 'contact@techsolutions.com',
-              phone: '+1 (555) 123-4567',
-              address: {
-                street: 'Av. Reforma 123',
-                city: 'Ciudad de México',
-                state: 'Ciudad de México',
-                postalCode: '06600',
-                country: 'México',
-              },
-              website: 'https://www.techsolutions.com',
-              description: 'Empresa líder en soluciones tecnológicas innovadoras',
-              industry: 'Tecnología',
-              createdAt: '2024-01-15T10:30:00Z',
-            },
-          },
-          {
-            companyId: '2',
-            companyName: 'Digital Agency',
-            role: 'member',
-            joinedAt: '2024-02-20T14:15:00Z',
-            company: {
-              id: '2',
-              name: 'Digital Agency',
-              email: 'info@digitalagency.com',
-              phone: '+1 (555) 987-6543',
-              address: {
-                street: 'Calle Libertad 456',
-                city: 'Guadalajara',
-                state: 'Jalisco',
-                postalCode: '44100',
-                country: 'México',
-              },
-              website: 'https://www.digitalagency.com',
-              description: 'Agencia digital especializada en marketing y diseño',
-              industry: 'Marketing',
-              createdAt: '2024-02-20T14:15:00Z',
-            },
-          },
-        ]
-
-        setCompanies(mockCompanies)
+        setCompanies(companies)
         // Select first company by default
-        if (mockCompanies.length > 0) {
-          setSelectedCompanyId(mockCompanies[0].companyId)
+        if (companies.length > 0) {
+          setSelectedCompanyId(companies[0].companyId)
         }
       } catch (error) {
-        const apiError = error as { message?: string }
+        const apiError = error as ApiError
         showError(apiError.message || 'Error al cargar la información')
         console.error('Error fetching user data:', error)
       } finally {
@@ -124,7 +76,8 @@ export default function DashboardPage() {
     }
 
     fetchUserData()
-  }, [showError])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleCompanyChange = useCallback((companyId: string) => {
     setSelectedCompanyId(companyId)
@@ -158,9 +111,8 @@ export default function DashboardPage() {
         // Transform form data to company update format
         const updateData = transformFormDataToCompany(formData)
 
-        // TODO: Replace with actual API call
-        console.log('Updating company:', selectedCompany.companyId, updateData)
-        await new Promise((resolve) => setTimeout(resolve, 1000))
+        // Update company via API
+        const updatedCompany = await updateCompany(selectedCompany.companyId, updateData)
 
         // Update local state
         setCompanies((prevCompanies) =>
@@ -168,10 +120,10 @@ export default function DashboardPage() {
             c.companyId === selectedCompany.companyId
               ? {
                   ...c,
-                  companyName: updateData.name,
+                  companyName: updatedCompany.name,
                   company: {
                     ...c.company,
-                    ...updateData,
+                    ...updatedCompany,
                   },
                 }
               : c
@@ -181,8 +133,13 @@ export default function DashboardPage() {
         showSuccess('Información de la empresa actualizada correctamente')
         handleCloseDrawer()
       } catch (error) {
-        const apiError = error as { message?: string }
-        showError(apiError.message || 'Error al actualizar la información de la empresa')
+        const apiError = error as ApiError
+        if (apiError.errors) {
+          // Handle validation errors if needed
+          showError(apiError.message || 'Error al actualizar la información de la empresa')
+        } else {
+          showError(apiError.message || 'Error al actualizar la información de la empresa')
+        }
       } finally {
         setEditLoading(false)
       }
@@ -246,7 +203,7 @@ export default function DashboardPage() {
 
   return (
     <Box>
-      <AppHeader />
+        <AppHeader />
       <Box
         component="main"
         sx={{
@@ -493,6 +450,6 @@ export default function DashboardPage() {
           />
         )}
       </Drawer>
-    </Box>
+      </Box>
   )
 }
