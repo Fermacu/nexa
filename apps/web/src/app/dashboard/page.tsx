@@ -18,6 +18,7 @@ import {
   MenuItem,
   Drawer,
   IconButton,
+  TextField,
 } from '@mui/material'
 import {
   Email as EmailIcon,
@@ -28,11 +29,14 @@ import {
   Description as DescriptionIcon,
   Edit as EditIcon,
   Close as CloseIcon,
+  People as PeopleIcon,
+  Person as PersonIcon,
+  PersonAdd as PersonAddIcon,
 } from '@mui/icons-material'
 import { useGlobalAlert } from '@app/components/GlobalAlert'
 import { AppHeader } from '@app/components/AppHeader'
 import { DynamicForm, FormData } from '@app/components/DynamicForm'
-import type { CompanyMembership } from '@app/types'
+import type { CompanyMembership, CompanyMember } from '@app/types'
 import { getRoleLabel, getRoleColor } from '@app/utils/roleUtils'
 import { formatDate } from '@app/utils/dateUtils'
 import {
@@ -41,7 +45,12 @@ import {
   transformFormDataToCompany,
 } from './companyEditConfig'
 import { getCurrentUserCompanies } from '@app/services/userService'
-import { updateCompany } from '@app/services/companyService'
+import {
+  updateCompany,
+  getCompanyMembers,
+  addCompanyMember,
+  type AddCompanyMemberRole,
+} from '@app/services/companyService'
 import type { ApiError } from '@app/services/api'
 
 export default function DashboardPage() {
@@ -52,6 +61,13 @@ export default function DashboardPage() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editLoading, setEditLoading] = useState(false)
+  const [members, setMembers] = useState<CompanyMember[]>([])
+  const [membersLoading, setMembersLoading] = useState(false)
+  const [addMemberDrawerOpen, setAddMemberDrawerOpen] = useState(false)
+  const [addMemberLoading, setAddMemberLoading] = useState(false)
+  const [addMemberEmail, setAddMemberEmail] = useState('')
+  const [addMemberRole, setAddMemberRole] = useState<AddCompanyMemberRole>('member')
+  const [addMemberErrors, setAddMemberErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -96,10 +112,91 @@ export default function DashboardPage() {
     [companies, selectedCompanyId]
   )
 
-  const isAdmin = useMemo(
+  const isAdminOrOwner = useMemo(
     () => selectedCompany?.role === 'owner' || selectedCompany?.role === 'admin',
     [selectedCompany?.role]
   )
+
+  useEffect(() => {
+    if (!selectedCompanyId || !isAdminOrOwner) {
+      setMembers([])
+      return
+    }
+    const fetchMembers = async () => {
+      try {
+        setMembersLoading(true)
+        const list = await getCompanyMembers(selectedCompanyId)
+        setMembers(list)
+      } catch (error) {
+        const apiError = error as ApiError
+        showError(apiError.message || 'Error al cargar los miembros')
+        setMembers([])
+      } finally {
+        setMembersLoading(false)
+      }
+    }
+    fetchMembers()
+  }, [selectedCompanyId, isAdminOrOwner, showError])
+
+  const canAssignOwner = selectedCompany?.role === 'owner'
+
+  const addMemberRoleOptions: { value: AddCompanyMemberRole; label: string }[] = [
+    ...(canAssignOwner ? [{ value: 'owner' as const, label: getRoleLabel('owner') }] : []),
+    { value: 'admin', label: getRoleLabel('admin') },
+    { value: 'member', label: getRoleLabel('member') },
+    { value: 'viewer', label: getRoleLabel('viewer') },
+  ]
+
+  const handleOpenAddMemberDrawer = useCallback(() => {
+    setAddMemberErrors({})
+    setAddMemberEmail('')
+    setAddMemberRole('member')
+    setAddMemberDrawerOpen(true)
+  }, [])
+
+  const handleCloseAddMemberDrawer = useCallback(() => {
+    setAddMemberDrawerOpen(false)
+    setAddMemberErrors({})
+  }, [])
+
+  const handleAddMember = useCallback(async () => {
+    if (!selectedCompanyId) return
+
+    const email = addMemberEmail.trim()
+    if (!email) {
+      setAddMemberErrors({ email: 'El correo electrónico es requerido' })
+      return
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setAddMemberErrors({ email: 'Ingresa un correo electrónico válido' })
+      return
+    }
+
+    try {
+      setAddMemberLoading(true)
+      setAddMemberErrors({})
+      await addCompanyMember(selectedCompanyId, { email, role: addMemberRole })
+      showSuccess('Invitación enviada. La persona recibirá una notificación y deberá aceptar para unirse a la organización.')
+      handleCloseAddMemberDrawer()
+    } catch (error) {
+      const apiError = error as ApiError
+      if (apiError.errors) {
+        setAddMemberErrors(apiError.errors)
+      } else {
+        showError(apiError.message || 'Error al agregar el miembro')
+      }
+    } finally {
+      setAddMemberLoading(false)
+    }
+  }, [
+    selectedCompanyId,
+    addMemberEmail,
+    addMemberRole,
+    showSuccess,
+    showError,
+    handleCloseAddMemberDrawer,
+  ])
 
   const handleSaveCompany = useCallback(
     async (formData: FormData) => {
@@ -279,7 +376,7 @@ export default function DashboardPage() {
                         />
                       </Box>
                     </Box>
-                    {isAdmin && (
+                    {isAdminOrOwner && (
                       <Button
                         variant="outlined"
                         startIcon={<EditIcon />}
@@ -404,6 +501,65 @@ export default function DashboardPage() {
                         Miembro desde: {formatDate(selectedCompany.joinedAt)}
                       </Typography>
                     </Grid>
+
+                    {/* Members list (owner/admin only) */}
+                    {isAdminOrOwner && (
+                      <Grid size={{ xs: 12 }}>
+                        <Divider sx={{ my: 2 }} />
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+                          <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <PeopleIcon color="primary" />
+                            Miembros de la organización
+                          </Typography>
+                          <Button
+                            variant="contained"
+                            startIcon={<PersonAddIcon />}
+                            onClick={handleOpenAddMemberDrawer}
+                            sx={{ textTransform: 'none' }}
+                          >
+                            Agregar miembro
+                          </Button>
+                        </Box>
+                        {membersLoading ? (
+                          <Typography variant="body2" color="text.secondary">
+                            Cargando miembros...
+                          </Typography>
+                        ) : members.length === 0 ? (
+                          <Typography variant="body2" color="text.secondary">
+                            No hay miembros registrados
+                          </Typography>
+                        ) : (
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {members.map((member) => (
+                              <Card key={member.userId} variant="outlined" sx={{ py: 1.5, px: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0, flex: 1 }}>
+                                    <PersonIcon color="action" sx={{ flexShrink: 0 }} />
+                                    <Box sx={{ minWidth: 0 }}>
+                                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                        {member.name}
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary" noWrap>
+                                        {member.email}
+                                      </Typography>
+                                    </Box>
+                                  </Box>
+                                  <Chip
+                                    label={getRoleLabel(member.role)}
+                                    color={getRoleColor(member.role)}
+                                    size="small"
+                                    sx={{ flexShrink: 0 }}
+                                  />
+                                  <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0 }}>
+                                    Desde {formatDate(member.joinedAt)}
+                                  </Typography>
+                                </Box>
+                              </Card>
+                            ))}
+                          </Box>
+                        )}
+                      </Grid>
+                    )}
                   </Grid>
                 </CardContent>
               </Card>
@@ -449,6 +605,85 @@ export default function DashboardPage() {
             loading={editLoading}
           />
         )}
+      </Drawer>
+
+      {/* Add Member Drawer */}
+      <Drawer
+        anchor="right"
+        open={addMemberDrawerOpen}
+        onClose={handleCloseAddMemberDrawer}
+        ModalProps={{
+          sx: {
+            zIndex: (theme) => theme.zIndex.drawer + 2,
+          },
+        }}
+        PaperProps={{
+          sx: {
+            width: { xs: '100%', sm: 420 },
+            p: 3,
+            zIndex: (theme) => theme.zIndex.drawer + 2,
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Agregar miembro
+          </Typography>
+          <IconButton onClick={handleCloseAddMemberDrawer} aria-label="close">
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
+        <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <TextField
+            fullWidth
+            label="Correo electrónico"
+            type="email"
+            value={addMemberEmail}
+            onChange={(e) => setAddMemberEmail(e.target.value)}
+            placeholder="usuario@ejemplo.com"
+            error={Boolean(addMemberErrors.email)}
+            helperText={addMemberErrors.email || 'La persona debe tener una cuenta registrada en NEXA para poder agregarla.'}
+            disabled={addMemberLoading}
+          />
+          <FormControl fullWidth error={Boolean(addMemberErrors.role)} disabled={addMemberLoading}>
+            <InputLabel id="add-member-role-label">Rol</InputLabel>
+            <Select
+              labelId="add-member-role-label"
+              value={addMemberRole}
+              label="Rol"
+              onChange={(e) => setAddMemberRole(e.target.value as AddCompanyMemberRole)}
+            >
+              {addMemberRoleOptions.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </Select>
+            {addMemberErrors.role && (
+              <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                {addMemberErrors.role}
+              </Typography>
+            )}
+          </FormControl>
+          {!canAssignOwner && (
+            <Typography variant="caption" color="text.secondary">
+              Solo un propietario puede agregar otro propietario.
+            </Typography>
+          )}
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
+            <Button onClick={handleCloseAddMemberDrawer} disabled={addMemberLoading}>
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleAddMember}
+              disabled={addMemberLoading}
+            >
+              {addMemberLoading ? 'Agregando...' : 'Agregar miembro'}
+            </Button>
+          </Box>
+        </Box>
       </Drawer>
       </Box>
   )

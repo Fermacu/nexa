@@ -65,6 +65,34 @@ router.post(
 // GET /api/companies/:id - Get company by ID
 router.get('/:id', companyController.getCompany);
 
+// GET /api/companies/:id/members - Get company members (owner/admin only)
+router.get('/:id/members', companyController.getCompanyMembersController);
+
+// POST /api/companies/:id/members - Add member (owner/admin only)
+const addMemberValidation = [
+  body('email').isEmail().normalizeEmail().withMessage('Correo electrónico válido requerido'),
+  body('role')
+    .isIn(['owner', 'admin', 'member', 'viewer'])
+    .withMessage('Rol debe ser owner, admin, member o viewer'),
+];
+router.post(
+  '/:id/members',
+  addMemberValidation,
+  (req: any, res: any, next: any) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const fieldErrors: Record<string, string> = {};
+      errors.array().forEach((err: any) => {
+        const path = err.path ?? err.param;
+        if (path) fieldErrors[path] = err.msg;
+      });
+      throw new ValidationError('Error de validación', fieldErrors);
+    }
+    next();
+  },
+  companyController.addCompanyMemberController
+);
+
 // PUT /api/companies/:id - Update company
 router.put(
   '/:id',

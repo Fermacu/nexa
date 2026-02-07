@@ -15,9 +15,16 @@ export const API_ENDPOINTS = {
   users: {
     me: '/api/users/me',
     myCompanies: '/api/users/me/companies',
+    myNotifications: '/api/users/me/notifications',
+    myNotificationsUnreadCount: '/api/users/me/notifications/unread-count',
+  },
+  invitations: {
+    accept: (id: string) => `/api/invitations/${id}/accept`,
+    decline: (id: string) => `/api/invitations/${id}/decline`,
   },
   companies: {
     create: '/api/companies',
     byId: (id: string) => `/api/companies/${id}`,
+    members: (id: string) => `/api/companies/${id}/members`,
   },
 } as const;

@@ -6,6 +6,7 @@
 
 import { apiClient } from './api';
 import { API_ENDPOINTS } from '../config/api';
+import type { CompanyMember } from '@app/types';
 
 export interface Company {
   id: string;
@@ -94,4 +95,45 @@ export async function updateCompany(companyId: string, data: UpdateCompanyInput)
   }
 
   return response.data;
+}
+
+/**
+ * Get list of members for a company (requires owner or admin role)
+ */
+export async function getCompanyMembers(companyId: string): Promise<CompanyMember[]> {
+  const response = await apiClient.get<CompanyMember[]>(API_ENDPOINTS.companies.members(companyId));
+
+  if (!response.success || !response.data) {
+    throw new Error(response.error?.message || 'Error al cargar los miembros');
+  }
+
+  return response.data;
+}
+
+export type AddCompanyMemberRole = 'owner' | 'admin' | 'member' | 'viewer';
+
+export interface AddCompanyMemberInput {
+  email: string;
+  role: AddCompanyMemberRole;
+}
+
+/**
+ * Send an invitation to join the company (requires owner or admin role).
+ * The invitee must accept the invitation to become a member.
+ * Admin cannot assign owner; owner can assign any role.
+ */
+export async function addCompanyMember(
+  companyId: string,
+  data: AddCompanyMemberInput
+): Promise<{ invitationSent: boolean }> {
+  const response = await apiClient.post<{ invitationSent: boolean }>(
+    API_ENDPOINTS.companies.members(companyId),
+    data
+  );
+
+  if (!response.success) {
+    throw new Error(response.error?.message || 'Error al enviar la invitación');
+  }
+
+  return response.data ?? { invitationSent: true };
 }

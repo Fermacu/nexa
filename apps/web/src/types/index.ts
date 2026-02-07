@@ -46,6 +46,15 @@ export interface CompanyMembership {
   company: Company
 }
 
+/** Member of a company (for listing members - used when user is owner/admin) */
+export interface CompanyMember {
+  userId: string
+  name: string
+  email: string
+  role: UserRole
+  joinedAt: string
+}
+
 // API Error Types
 export interface ApiError {
   message: string

@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { getUserByUid, updateUser, getUserCompanies } from '../services/userService';
+import { getNotificationsByUserId, getUnreadCount } from '../services/notificationService';
 import { sendSuccess } from '../utils/response';
 
 /**
@@ -46,4 +47,36 @@ export async function getCurrentUserCompanies(
 
   const companies = await getUserCompanies(req.user.uid);
   return sendSuccess(res, companies);
+}
+
+/**
+ * GET /api/users/me/notifications
+ * Get current user's notifications
+ */
+export async function getMyNotifications(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<Response> {
+  if (!req.user?.uid) {
+    throw new Error('User not authenticated');
+  }
+
+  const notifications = await getNotificationsByUserId(req.user.uid);
+  return sendSuccess(res, notifications);
+}
+
+/**
+ * GET /api/users/me/notifications/unread-count
+ * Get unread notifications count
+ */
+export async function getMyUnreadCount(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<Response> {
+  if (!req.user?.uid) {
+    throw new Error('User not authenticated');
+  }
+
+  const count = await getUnreadCount(req.user.uid);
+  return sendSuccess(res, { count });
 }
