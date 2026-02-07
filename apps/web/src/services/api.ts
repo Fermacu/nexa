@@ -68,7 +68,7 @@ class ApiClient {
       if (!response.ok) {
         // Handle error response
         const error: ApiError = {
-          message: data.error?.message || 'An error occurred',
+          message: data.error?.message || 'Ocurrió un error',
           code: data.error?.code,
           errors: data.error?.errors,
         };
@@ -80,7 +80,7 @@ class ApiClient {
       // Handle network errors or other exceptions
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw {
-          message: 'Network error. Please check your connection.',
+          message: 'Error de red. Por favor verifica tu conexión.',
           code: 'NETWORK_ERROR',
         } as ApiError;
       }
@@ -91,7 +91,7 @@ class ApiClient {
       }
 
       throw {
-        message: 'An unexpected error occurred',
+        message: 'Ocurrió un error inesperado',
         code: 'UNKNOWN_ERROR',
       } as ApiError;
     }

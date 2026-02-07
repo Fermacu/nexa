@@ -52,7 +52,7 @@ export async function getCurrentUser(): Promise<User> {
   const response = await apiClient.get<User>(API_ENDPOINTS.users.me);
 
   if (!response.success || !response.data) {
-    throw new Error(response.error?.message || 'Failed to get user');
+    throw new Error(response.error?.message || 'Error al obtener el usuario');
   }
 
   return response.data;
@@ -65,7 +65,7 @@ export async function updateCurrentUser(data: UpdateUserInput): Promise<User> {
   const response = await apiClient.put<User>(API_ENDPOINTS.users.me, data);
 
   if (!response.success || !response.data) {
-    throw new Error(response.error?.message || 'Failed to update user');
+    throw new Error(response.error?.message || 'Error al actualizar el usuario');
   }
 
   return response.data;
@@ -78,7 +78,7 @@ export async function getCurrentUserCompanies(): Promise<CompanyMembership[]> {
   const response = await apiClient.get<CompanyMembership[]>(API_ENDPOINTS.users.myCompanies);
 
   if (!response.success || !response.data) {
-    throw new Error(response.error?.message || 'Failed to get companies');
+    throw new Error(response.error?.message || 'Error al obtener las empresas');
   }
 
   return response.data;
