@@ -52,7 +52,7 @@ export interface UpdateCompanyInput {
 }
 
 /**
- * Create a new company and add the creator as admin
+ * Create a new company and add the creator as owner
  */
 export async function createCompany(data: CreateCompanyInput, uid: string): Promise<Company> {
   if (!firebase.db) {
@@ -77,11 +77,11 @@ export async function createCompany(data: CreateCompanyInput, uid: string): Prom
 
   const companyId = companyRef.id;
 
-  // 2. Create membership (user is admin of the new company)
+  // 2. Create membership (user is owner of the new company)
   await firebase.db.collection('memberships').add({
     userId: uid,
     companyId,
-    role: 'admin',
+    role: 'owner',
     joinedAt: now,
   });
 
@@ -143,7 +143,8 @@ async function checkCompanyPermission(uid: string, companyId: string): Promise<b
   }
 
   const membership = membershipSnapshot.docs[0].data();
-  return membership.role === 'admin';
+  // Owner and admin can update company information
+  return membership.role === 'owner' || membership.role === 'admin';
 }
 
 /**

@@ -7,12 +7,14 @@
 import type { UserRole } from '@app/types'
 
 const ROLE_LABELS: Record<UserRole, string> = {
+  owner: 'Propietario',
   admin: 'Administrador',
   member: 'Miembro',
   viewer: 'Visor',
 }
 
-const ROLE_COLORS: Record<UserRole, 'primary' | 'default' | 'secondary' | 'success'> = {
+const ROLE_COLORS: Record<UserRole, 'primary' | 'default' | 'secondary' | 'success' | 'warning'> = {
+  owner: 'warning',
   admin: 'primary',
   member: 'default',
   viewer: 'secondary',

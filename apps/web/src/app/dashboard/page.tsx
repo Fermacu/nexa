@@ -97,7 +97,7 @@ export default function DashboardPage() {
   )
 
   const isAdmin = useMemo(
-    () => selectedCompany?.role === 'admin',
+    () => selectedCompany?.role === 'owner' || selectedCompany?.role === 'admin',
     [selectedCompany?.role]
   )
 

@@ -130,7 +130,7 @@ interface Company {
 interface UserCompanyMembership {
   userId: string                // Reference to User
   companyId: string             // Reference to Company
-  role: string                  // e.g., "admin", "member", "viewer"
+  role: string                  // e.g., "owner", "admin", "member", "viewer"
   createdAt: Date              // When user joined this company
 }
 
@@ -158,7 +158,7 @@ interface CompleteRegistration {
 4. Optionally can add additional information (website, description, industry)
 5. System validates all company data
 6. Company/organization is created in Firestore
-7. User-Company membership is created with "admin" role
+7. User-Company membership is created with "owner" role (the creator becomes the owner of the organization)
 8. User can create multiple organizations or be invited to other organizations using the same email
 
 ---
@@ -169,7 +169,9 @@ interface CompleteRegistration {
 - **Registration flexibility**: Users can register without creating an organization, allowing collaborators to create accounts and be added to organizations later by administrators
 - **User-Organization relationship**: Users and organizations have a many-to-many relationship
   - One user account (identified by unique email) can belong to multiple organizations
-  - When a user creates a company, they automatically become an admin member of that organization
+  - When a user creates a company, they automatically become the **owner** of that organization
+  - The owner role has the highest level of permissions and can perform sensitive operations
+  - Administrators can also manage the organization but with some restrictions compared to owners
   - The same user can later be invited/added to other organizations using the same email
   - Each organization membership has its own role and permissions
 - **Scalability**: The structure allows adding more fields in the future without breaking the base structure

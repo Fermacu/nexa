@@ -36,7 +36,7 @@ export interface Company {
 }
 
 // Company Membership Types
-export type UserRole = 'admin' | 'member' | 'viewer'
+export type UserRole = 'owner' | 'admin' | 'member' | 'viewer'
 
 export interface CompanyMembership {
   companyId: string
