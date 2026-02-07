@@ -1,7 +1,23 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { getCompanyById, updateCompany } from '../services/companyService';
+import { getCompanyById, updateCompany, createCompany } from '../services/companyService';
 import { sendSuccess } from '../utils/response';
+
+/**
+ * POST /api/companies
+ * Create a new company
+ */
+export async function createCompanyController(
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<Response> {
+  if (!req.user?.uid) {
+    throw new Error('User not authenticated');
+  }
+
+  const company = await createCompany(req.body, req.user.uid);
+  return sendSuccess(res, company, 'Organización creada correctamente', 201);
+}
 
 /**
  * GET /api/companies/:id

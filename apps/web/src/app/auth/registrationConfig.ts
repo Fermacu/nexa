@@ -1,16 +1,14 @@
 /**
  * Registration Form Configuration
  * 
- * Form configuration for user and company registration.
- * This follows modern SaaS standards for user and company onboarding.
+ * Form configuration for user registration only.
+ * Users can create organizations later from their profile.
  */
 
 import { DynamicFormConfig } from '@app/components/DynamicForm'
-import { getCompanyFormFields } from '@app/config/companyFormFields'
 
 export const registrationConfig: DynamicFormConfig = {
   fields: [
-    // Section: Creator User Information
     {
       name: 'userName',
       label: 'Nombre completo',
@@ -65,9 +63,6 @@ export const registrationConfig: DynamicFormConfig = {
       },
       helperText: 'Opcional, se usa para recuperación de cuenta',
     },
-
-    // Section: Company Information (shared fields)
-    ...getCompanyFormFields(),
   ],
   spacing: 3,
   submitLabel: 'Crear cuenta',
@@ -85,21 +80,6 @@ export function transformRegistrationData(formData: Record<string, any>) {
       email: formData.userEmail,
       password: formData.userPassword,
       phone: formData.userPhone || undefined,
-    },
-    company: {
-      name: formData.companyName,
-      email: formData.companyEmail,
-      phone: formData.companyPhone,
-      address: {
-        street: formData.street,
-        city: formData.city,
-        state: formData.state,
-        postalCode: formData.postalCode,
-        country: formData.country,
-      },
-      website: formData.website || undefined,
-      industry: formData.industry || undefined,
-      description: formData.description || undefined,
     },
   }
 }

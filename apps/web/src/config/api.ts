@@ -17,6 +17,7 @@ export const API_ENDPOINTS = {
     myCompanies: '/api/users/me/companies',
   },
   companies: {
+    create: '/api/companies',
     byId: (id: string) => `/api/companies/${id}`,
   },
 } as const;

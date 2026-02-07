@@ -25,6 +25,22 @@ export interface Company {
   createdAt: string;
 }
 
+export interface CreateCompanyInput {
+  name: string;
+  email: string;
+  phone: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+  website?: string;
+  description?: string;
+  industry?: string;
+}
+
 export interface UpdateCompanyInput {
   name?: string;
   email?: string;
@@ -39,6 +55,19 @@ export interface UpdateCompanyInput {
   website?: string;
   description?: string;
   industry?: string;
+}
+
+/**
+ * Create a new company
+ */
+export async function createCompany(data: CreateCompanyInput): Promise<Company> {
+  const response = await apiClient.post<Company>(API_ENDPOINTS.companies.create, data);
+
+  if (!response.success || !response.data) {
+    throw new Error(response.error?.message || 'Error al crear la organización');
+  }
+
+  return response.data;
 }
 
 /**

@@ -19,6 +19,22 @@ export interface Company {
   createdAt: string;
 }
 
+export interface CreateCompanyInput {
+  name: string;
+  email: string;
+  phone: string;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+  };
+  website?: string;
+  description?: string;
+  industry?: string;
+}
+
 export interface UpdateCompanyInput {
   name?: string;
   email?: string;
@@ -33,6 +49,44 @@ export interface UpdateCompanyInput {
   website?: string;
   description?: string;
   industry?: string;
+}
+
+/**
+ * Create a new company and add the creator as admin
+ */
+export async function createCompany(data: CreateCompanyInput, uid: string): Promise<Company> {
+  if (!firebase.db) {
+    throw new AppError('Firebase database not configured', 503);
+  }
+
+  const FieldValue = firebase.default.firestore.FieldValue;
+  const now = FieldValue.serverTimestamp();
+
+  // 1. Create Firestore company document
+  const companyRef = firebase.db.collection('companies').doc();
+  await companyRef.set({
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    address: data.address,
+    ...(data.website && { website: data.website }),
+    ...(data.description && { description: data.description }),
+    ...(data.industry && { industry: data.industry }),
+    createdAt: now,
+  });
+
+  const companyId = companyRef.id;
+
+  // 2. Create membership (user is admin of the new company)
+  await firebase.db.collection('memberships').add({
+    userId: uid,
+    companyId,
+    role: 'admin',
+    joinedAt: now,
+  });
+
+  // 3. Return the created company
+  return getCompanyById(companyId);
 }
 
 /**
