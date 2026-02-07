@@ -27,25 +27,8 @@ export interface RegisterUserInput {
   phone?: string;
 }
 
-export interface RegisterCompanyInput {
-  name: string;
-  email: string;
-  phone: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-  };
-  website?: string;
-  description?: string;
-  industry?: string;
-}
-
 export interface RegisterInput {
   user: RegisterUserInput;
-  company: RegisterCompanyInput;
 }
 
 export interface RegisterResponse {
@@ -103,7 +86,7 @@ export async function login(
 }
 
 /**
- * Register new user with company
+ * Register new user (without organization)
  */
 export async function register(
   data: RegisterInput

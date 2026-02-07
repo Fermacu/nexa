@@ -8,25 +8,8 @@ export interface RegisterUserInput {
   phone?: string;
 }
 
-export interface RegisterCompanyInput {
-  name: string;
-  email: string;
-  phone: string;
-  address: {
-    street: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-  };
-  website?: string;
-  description?: string;
-  industry?: string;
-}
-
 export interface RegisterInput {
   user: RegisterUserInput;
-  company: RegisterCompanyInput;
 }
 
 export interface RegisterResult {
@@ -49,8 +32,9 @@ export interface LoginResult {
 }
 
 /**
- * Register a new user with their first company.
- * Creates Firebase Auth user, Firestore user doc, company doc, and membership.
+ * Register a new user.
+ * Creates Firebase Auth user and Firestore user document.
+ * Users can create organizations later from their profile.
  */
 export async function register(data: RegisterInput): Promise<RegisterResult> {
   if (!firebase.auth || !firebase.db) {
@@ -61,7 +45,7 @@ export async function register(data: RegisterInput): Promise<RegisterResult> {
   }
 
   const FieldValue = firebase.default.firestore.FieldValue;
-  const { user: userInput, company: companyInput } = data;
+  const { user: userInput } = data;
 
   // 1. Create Firebase Auth user
   let firebaseUser;
@@ -94,29 +78,6 @@ export async function register(data: RegisterInput): Promise<RegisterResult> {
     email: userInput.email,
     ...(userInput.phone && { phone: userInput.phone }),
     createdAt: now,
-  });
-
-  // 3. Create Firestore company document
-  const companyRef = firebase.db.collection('companies').doc();
-  await companyRef.set({
-    name: companyInput.name,
-    email: companyInput.email,
-    phone: companyInput.phone,
-    address: companyInput.address,
-    ...(companyInput.website && { website: companyInput.website }),
-    ...(companyInput.description && { description: companyInput.description }),
-    ...(companyInput.industry && { industry: companyInput.industry }),
-    createdAt: now,
-  });
-
-  const companyId = companyRef.id;
-
-  // 4. Create membership (user is admin of the new company)
-  await firebase.db.collection('memberships').add({
-    userId: uid,
-    companyId,
-    role: 'admin',
-    joinedAt: now,
   });
 
   return {

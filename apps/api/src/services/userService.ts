@@ -40,6 +40,36 @@ export async function getUserByUid(uid: string): Promise<User> {
 }
 
 /**
+ * Get user by email (returns null if not found)
+ */
+export async function getUserByEmail(email: string): Promise<User | null> {
+  if (!firebase.db) {
+    throw new AppError('Firebase database not configured', 503);
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const snapshot = await firebase.db
+    .collection('users')
+    .where('email', '==', normalizedEmail)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  const userDoc = snapshot.docs[0];
+  const userData = userDoc.data();
+  return {
+    id: userDoc.id,
+    name: userData?.name || '',
+    email: userData?.email || '',
+    phone: userData?.phone,
+    createdAt: userData?.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+  };
+}
+
+/**
  * Update user information
  */
 export async function updateUser(uid: string, data: UpdateUserInput): Promise<User> {

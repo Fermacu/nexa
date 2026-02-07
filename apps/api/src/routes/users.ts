@@ -43,4 +43,10 @@ router.put(
 // GET /api/users/me/companies - Get current user's companies
 router.get('/me/companies', userController.getCurrentUserCompanies);
 
+// GET /api/users/me/notifications - Get current user's notifications
+router.get('/me/notifications', userController.getMyNotifications);
+
+// GET /api/users/me/notifications/unread-count - Get unread count
+router.get('/me/notifications/unread-count', userController.getMyUnreadCount);
+
 export const userRoutes = router;

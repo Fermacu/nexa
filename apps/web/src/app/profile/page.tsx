@@ -41,6 +41,8 @@ import {
   transformUserToFormData,
 } from './personalInfoConfig'
 import { getCurrentUser, updateCurrentUser, getCurrentUserCompanies } from '@app/services/userService'
+import { createCompany } from '@app/services/companyService'
+import { getCompanyFormFields, transformFormDataToCompany } from '@app/config/companyFormFields'
 import type { ApiError } from '@app/services/api'
 
 interface TabPanelProps {
@@ -75,6 +77,8 @@ export default function ProfilePage() {
   const [companies, setCompanies] = useState<CompanyMembership[]>([])
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editLoading, setEditLoading] = useState(false)
+  const [createCompanyDrawerOpen, setCreateCompanyDrawerOpen] = useState(false)
+  const [createCompanyLoading, setCreateCompanyLoading] = useState(false)
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -113,6 +117,46 @@ export default function ProfilePage() {
   const handleCloseDrawer = useCallback(() => {
     setDrawerOpen(false)
   }, [])
+
+  const handleOpenCreateCompanyDrawer = useCallback(() => {
+    setCreateCompanyDrawerOpen(true)
+  }, [])
+
+  const handleCloseCreateCompanyDrawer = useCallback(() => {
+    setCreateCompanyDrawerOpen(false)
+  }, [])
+
+  const handleCreateCompany = useCallback(
+    async (formData: FormData) => {
+      try {
+        setCreateCompanyLoading(true)
+        
+        // Transform form data to API format
+        const companyData = transformFormDataToCompany(formData)
+        
+        // Create company via API
+        await createCompany(companyData)
+
+        // Refresh companies list
+        const companiesData = await getCurrentUserCompanies()
+        setCompanies(companiesData)
+
+        showSuccess('Organización creada correctamente')
+        handleCloseCreateCompanyDrawer()
+      } catch (error) {
+        const apiError = error as ApiError
+        if (apiError.errors) {
+          // Handle validation errors if needed
+          showError(apiError.message || 'Error al crear la organización')
+        } else {
+          showError(apiError.message || 'Error al crear la organización')
+        }
+      } finally {
+        setCreateCompanyLoading(false)
+      }
+    },
+    [showSuccess, showError, handleCloseCreateCompanyDrawer]
+  )
 
   const handleSavePersonalInfo = useCallback(
     async (formData: FormData) => {
@@ -374,12 +418,24 @@ export default function ProfilePage() {
                   <TabPanel value={tabValue} index={1}>
                     <Grid container spacing={3}>
                       <Grid size={{ xs: 12 }}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                          Mis Organizaciones
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                          Organizaciones donde eres miembro
-                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                          <Box>
+                            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                              Mis Organizaciones
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Organizaciones donde eres miembro
+                            </Typography>
+                          </Box>
+                          <Button
+                            variant="contained"
+                            startIcon={<BusinessIcon />}
+                            onClick={handleOpenCreateCompanyDrawer}
+                            sx={{ textTransform: 'none' }}
+                          >
+                            Crear nueva organización
+                          </Button>
+                        </Box>
                       </Grid>
 
                       {companies.length === 0 ? (
@@ -389,9 +445,13 @@ export default function ProfilePage() {
                             <Typography variant="body1" color="text.secondary" gutterBottom>
                               No estás registrado en ninguna organización
                             </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                              Crea una nueva organización para comenzar
+                            </Typography>
                             <Button
                               variant="contained"
-                              onClick={() => router.push('/auth')}
+                              startIcon={<BusinessIcon />}
+                              onClick={handleOpenCreateCompanyDrawer}
                               sx={{ mt: 2 }}
                             >
                               Crear organización
@@ -556,6 +616,47 @@ export default function ProfilePage() {
             loading={editLoading}
           />
         )}
+      </Drawer>
+
+      {/* Create Company Drawer */}
+      <Drawer
+        anchor="right"
+        open={createCompanyDrawerOpen}
+        onClose={handleCloseCreateCompanyDrawer}
+        ModalProps={{
+          sx: {
+            zIndex: (theme) => theme.zIndex.drawer + 2,
+          },
+        }}
+        PaperProps={{
+          sx: {
+            width: { xs: '100%', sm: 600 },
+            p: 3,
+            zIndex: (theme) => theme.zIndex.drawer + 2,
+            overflowY: 'auto',
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Crear nueva organización
+          </Typography>
+          <IconButton onClick={handleCloseCreateCompanyDrawer} aria-label="close">
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
+        <DynamicForm
+          config={{
+            fields: getCompanyFormFields(),
+            spacing: 3,
+            submitLabel: 'Crear organización',
+            resetOnSubmit: false,
+            showSubmitButton: true,
+          }}
+          onSubmit={handleCreateCompany}
+          loading={createCompanyLoading}
+        />
       </Drawer>
       </Box>
     </ProtectedRoute>

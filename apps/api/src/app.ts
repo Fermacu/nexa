@@ -6,6 +6,7 @@ import 'express-async-errors';
 import { authRoutes } from './routes/auth';
 import { userRoutes } from './routes/users';
 import { companyRoutes } from './routes/companies';
+import { invitationRoutes } from './routes/invitations';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -31,6 +32,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/companies', companyRoutes);
+app.use('/api/invitations', invitationRoutes);
 
 // 404 handler
 app.use((req, res) => {

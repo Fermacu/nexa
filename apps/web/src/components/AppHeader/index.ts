@@ -1,1 +1,1 @@
-export { AppHeader } from './AppHeader'
+export { AppHeader, dispatchNotificationsUpdated } from './AppHeader'

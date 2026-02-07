@@ -9,6 +9,22 @@ const router = Router();
 // All company routes require authentication
 router.use(authenticate);
 
+// Validation for company creation
+const createCompanyValidation = [
+  body('name').trim().isLength({ min: 2, max: 200 }).withMessage('Nombre entre 2 y 200 caracteres'),
+  body('email').isEmail().normalizeEmail().withMessage('Correo de empresa válido requerido'),
+  body('phone').trim().notEmpty().withMessage('Teléfono de empresa requerido'),
+  body('address').isObject().withMessage('address is required'),
+  body('address.street').trim().isLength({ min: 3, max: 200 }).withMessage('Dirección entre 3 y 200 caracteres'),
+  body('address.city').trim().isLength({ min: 2, max: 100 }).withMessage('Ciudad entre 2 y 100 caracteres'),
+  body('address.state').trim().isLength({ min: 2, max: 100 }).withMessage('Estado entre 2 y 100 caracteres'),
+  body('address.postalCode').trim().isLength({ min: 3, max: 20 }).withMessage('Código postal entre 3 y 20 caracteres'),
+  body('address.country').trim().notEmpty().withMessage('País requerido'),
+  body('website').optional().isURL().withMessage('URL de sitio web válida'),
+  body('industry').optional().trim(),
+  body('description').optional().trim().isLength({ max: 500 }).withMessage('Descripción máximo 500 caracteres'),
+];
+
 // Validation for company update
 const updateCompanyValidation = [
   body('name').optional().trim().isLength({ min: 2, max: 200 }).withMessage('Nombre entre 2 y 200 caracteres'),
@@ -25,8 +41,57 @@ const updateCompanyValidation = [
   body('description').optional().trim().isLength({ max: 500 }).withMessage('Descripción máximo 500 caracteres'),
 ];
 
+// POST /api/companies - Create a new company
+router.post(
+  '/',
+  createCompanyValidation,
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const fieldErrors: Record<string, string> = {};
+      errors.array().forEach((err) => {
+        const path = err.path || err.param;
+        if (path) {
+          fieldErrors[path] = err.msg;
+        }
+      });
+      throw new ValidationError('Error de validación', fieldErrors);
+    }
+    next();
+  },
+  companyController.createCompanyController
+);
+
 // GET /api/companies/:id - Get company by ID
 router.get('/:id', companyController.getCompany);
+
+// GET /api/companies/:id/members - Get company members (owner/admin only)
+router.get('/:id/members', companyController.getCompanyMembersController);
+
+// POST /api/companies/:id/members - Add member (owner/admin only)
+const addMemberValidation = [
+  body('email').isEmail().normalizeEmail().withMessage('Correo electrónico válido requerido'),
+  body('role')
+    .isIn(['owner', 'admin', 'member', 'viewer'])
+    .withMessage('Rol debe ser owner, admin, member o viewer'),
+];
+router.post(
+  '/:id/members',
+  addMemberValidation,
+  (req: any, res: any, next: any) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const fieldErrors: Record<string, string> = {};
+      errors.array().forEach((err: any) => {
+        const path = err.path ?? err.param;
+        if (path) fieldErrors[path] = err.msg;
+      });
+      throw new ValidationError('Error de validación', fieldErrors);
+    }
+    next();
+  },
+  companyController.addCompanyMemberController
+);
 
 // PUT /api/companies/:id - Update company
 router.put(

@@ -4,7 +4,8 @@ import { sendSuccess } from '../utils/response';
 
 /**
  * POST /api/auth/register
- * Register a new user with their first company.
+ * Register a new user (without organization).
+ * Users can create organizations later from their profile.
  */
 export async function registerController(req: Request, res: Response): Promise<Response> {
   const result = await register(req.body);

@@ -1,18 +1,18 @@
 # Company Data Structure in NEXA
 
-This document defines the data structure for information collected when a company registers in NEXA.
+This document defines the data structure for user registration and company creation in NEXA.
 
 ## Summary
 
-When a user creates an account in NEXA, they are registering two types of information:
-1. **Creator User Information** - Data of the person creating the account
-2. **Company Information** - Data of the organization/company being registered
+When a user creates an account in NEXA, they register only their personal information. Organizations/companies are created separately from the user profile page after registration:
+1. **User Information** - Data of the person creating the account (collected during registration)
+2. **Company Information** - Data of the organization/company (created later from the profile page)
 
 ---
 
-## 1. Creator User Information
+## 1. User Information
 
-Basic information about the person registering the company. This user will be the initial administrator of the organization.
+Basic information about the person creating the account. This information is collected during user registration.
 
 ### Required Fields
 
@@ -25,16 +25,16 @@ Basic information about the person registering the company. This user will be th
 
 ### Notes
 - **Email must be unique in the system** (one user account per email)
-- The creator user automatically becomes the company administrator for the company being created
-- This user can invite other members after registration
+- Users can register without creating an organization (useful for collaborators who will be added to organizations later)
 - **A user can belong to multiple organizations** - The same user account (identified by email) can be a member of multiple companies/organizations
+- When a user creates an organization, they automatically become the administrator of that organization
 - When a user is added to a new organization, they use the same email but have separate roles/permissions per organization
 
 ---
 
 ## 2. Company/Organization Information
 
-Information about the company registering in NEXA. This data validates the existence of the organization.
+Information about the company/organization created in NEXA. This data is collected when a user creates a new organization from their profile page. This data validates the existence of the organization.
 
 ### Required Fields
 
@@ -130,7 +130,7 @@ interface Company {
 interface UserCompanyMembership {
   userId: string                // Reference to User
   companyId: string             // Reference to Company
-  role: string                  // e.g., "admin", "member", "viewer"
+  role: string                  // e.g., "owner", "admin", "member", "viewer"
   createdAt: Date              // When user joined this company
 }
 
@@ -143,25 +143,35 @@ interface CompleteRegistration {
 
 ---
 
-## 6. Registration Flow
+## 6. Registration and Company Creation Flow
 
+### User Registration Flow:
 1. User enters their personal data (name, email, password, optional phone)
-2. User enters company data (name, complete address, corporate email, phone)
-3. Optionally can add additional information (website, description, industry)
-4. System validates all data
-5. User account is created (or verified if email already exists)
-6. Company/organization is created
-7. User-Company membership is created with "admin" role
-8. User can later be invited to other organizations using the same email
+2. System validates user data
+3. User account is created in Firebase Auth and Firestore
+4. User can now log in and access their profile
+
+### Company Creation Flow (from Profile):
+1. User navigates to Profile → Organizations tab
+2. User clicks "Crear nueva organización"
+3. User enters company data (name, complete address, corporate email, phone)
+4. Optionally can add additional information (website, description, industry)
+5. System validates all company data
+6. Company/organization is created in Firestore
+7. User-Company membership is created with "owner" role (the creator becomes the owner of the organization)
+8. User can create multiple organizations or be invited to other organizations using the same email
 
 ---
 
 ## 7. Important Considerations
 
 - **Data separation**: User email and company email can be different
+- **Registration flexibility**: Users can register without creating an organization, allowing collaborators to create accounts and be added to organizations later by administrators
 - **User-Organization relationship**: Users and organizations have a many-to-many relationship
   - One user account (identified by unique email) can belong to multiple organizations
-  - When a user creates a company, they become a member of that organization
+  - When a user creates a company, they automatically become the **owner** of that organization
+  - The owner role has the highest level of permissions and can perform sensitive operations
+  - Administrators can also manage the organization but with some restrictions compared to owners
   - The same user can later be invited/added to other organizations using the same email
   - Each organization membership has its own role and permissions
 - **Scalability**: The structure allows adding more fields in the future without breaking the base structure
