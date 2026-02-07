@@ -48,7 +48,7 @@ export async function getCompanyById(companyId: string): Promise<Company> {
   const response = await apiClient.get<Company>(API_ENDPOINTS.companies.byId(companyId));
 
   if (!response.success || !response.data) {
-    throw new Error(response.error?.message || 'Failed to get company');
+    throw new Error(response.error?.message || 'Error al obtener la empresa');
   }
 
   return response.data;
@@ -61,7 +61,7 @@ export async function updateCompany(companyId: string, data: UpdateCompanyInput)
   const response = await apiClient.put<Company>(API_ENDPOINTS.companies.byId(companyId), data);
 
   if (!response.success || !response.data) {
-    throw new Error(response.error?.message || 'Failed to update company');
+    throw new Error(response.error?.message || 'Error al actualizar la empresa');
   }
 
   return response.data;

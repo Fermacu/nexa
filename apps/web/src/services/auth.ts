@@ -93,7 +93,7 @@ export async function login(
   );
 
   if (!response.success || !response.data) {
-    throw new Error(response.error?.message || 'Login failed');
+    throw new Error(response.error?.message || 'Error al iniciar sesión');
   }
 
   // Store the token
@@ -114,7 +114,7 @@ export async function register(
   );
 
   if (!response.success || !response.data) {
-    throw new Error(response.error?.message || 'Registration failed');
+    throw new Error(response.error?.message || 'Error al registrar');
   }
 
   return response.data;
